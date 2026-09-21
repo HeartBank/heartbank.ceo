@@ -1,0 +1,52 @@
+/* ============================================================================
+   THEME RESOLUTION — the two-state stamp (light default)
+   ----------------------------------------------------------------------------
+   Load immediately after tokens.css. Pick this OR theme-3block.css, never both.
+
+   Used by 333.eco. ⚠️ THIS IS NOT AN INFERIOR VARIANT OF THE THREE-BLOCK
+   CASCADE, and converting that site to the other file would be a regression.
+   Its dark-mode.ts already resolves three states correctly — stored "dark",
+   stored "light", else prefers-color-scheme — and stamps ONLY `.dark`. Absence
+   of the class therefore MEANS light. Adding a `:root.light` block, or a
+   prefers-color-scheme media query, would create a second source of truth for
+   something a resolver already owns. Honour the resolver that exists.
+
+   The consequence worth stating: with no head script at all, this file lands
+   on LIGHT where theme-3block.css lands on dark. That is correct for a site
+   whose default is light and wrong for one whose default is dark, which is the
+   whole reason there are two files.
+
+   Nothing here holds a VALUE. Every declaration references a -d-/-l- pair from
+   tokens.css.                                                                */
+
+:root {
+    color-scheme: light;
+    --bg: var(--l-bg);
+    --bg-tint: var(--l-bg-tint);
+    --surface: var(--l-surface);
+    --surface-2: var(--l-surface-2);
+    --line: var(--l-line);
+    --line-strong: var(--l-line-strong);
+    --ink: var(--l-ink);
+    --ink-dim: var(--l-ink-dim);
+    --ink-faint: var(--l-ink-faint);
+    --scrim: var(--l-scrim);
+    --soft-mix: var(--l-soft-mix);
+    --soft-with: var(--l-soft-with);
+}
+
+:root.dark {
+    color-scheme: dark;
+    --bg: var(--d-bg);
+    --bg-tint: var(--d-bg-tint);
+    --surface: var(--d-surface);
+    --surface-2: var(--d-surface-2);
+    --line: var(--d-line);
+    --line-strong: var(--d-line-strong);
+    --ink: var(--d-ink);
+    --ink-dim: var(--d-ink-dim);
+    --ink-faint: var(--d-ink-faint);
+    --scrim: var(--d-scrim);
+    --soft-mix: var(--d-soft-mix);
+    --soft-with: var(--d-soft-with);
+}

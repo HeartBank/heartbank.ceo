@@ -1,0 +1,6 @@
+# Canonical heartbank.ceo URLs to prior-art-snapshot on push (one per line; # = comment).
+# vite.config.ts fails the build if a page in NAV is missing here, so a new page cannot ship
+# without being archived. Extra lines beyond NAV (redirects, retired URLs) are allowed.
+
+https://heartbank.ceo/
+https://heartbank.ceo/about/

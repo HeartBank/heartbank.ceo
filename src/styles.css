@@ -1,0 +1,188 @@
+/*
+ * ⛔ THE SCAN IS NAMED, NOT DETECTED. Tailwind's automatic source detection honours `.gitignore`
+ *   only inside a git repository — so a build from a fresh copy scanned `node_modules/` and shipped
+ *   63 kB of utilities no page uses. The pages, the partials and the one config file that writes
+ *   class names are the whole source; anything else that starts carrying classes goes here.
+ */
+@import "tailwindcss" source(none);
+@source "../index.html";
+@source "../404.html";
+@source "../about/index.html";
+@source "../partials";
+@source "../vite.config.ts";
+
+/*
+ * The heartbeat comes from the VENDORED brand layer — `src/brand/motion.css`, hashed by
+ * `brand.lock` and checked before every build. ⛔ Never re-declare `@keyframes heartbeat` here: a
+ * second definition of the same name is a fork that nothing will ever reconcile. The layer owns
+ * the waveform — two unequal beats, then a long rest — and that morphology is the signature.
+ *
+ * ⚠️ `tokens.css` is vendored beside it and deliberately NOT imported. It carries the layer's own
+ *   `--accent`, which is a different green from the artboard's `#15803d`; importing it would
+ *   silently swap this site's colour. The two values `.beating` reads are restated below instead.
+ */
+@import "./brand/motion.css";
+
+/*
+ * ⭐ DARK FOLLOWS THE OPERATING SYSTEM, AND NOTHING ELSE. The site ships no script that could
+ *   stamp a `.dark` class — there is no toggle and nothing to remember a choice — so the variant
+ *   is the media query itself. A preference nobody can set is not a preference to store.
+ */
+@custom-variant dark (@media (prefers-color-scheme: dark));
+
+/*
+ * ⛔⛔ THE ARTBOARD IS THE DESIGN SYSTEM, AND THESE ARE ITS TOKENS.
+ *
+ * Every value is lifted from `demo.heartbank.ceo/Main.dc.html`, the design of record, and
+ * `npm run tokens:check` diffs them against it before every build — the drawing is the source,
+ * and this block is checked, not trusted. They sit in `@theme` because Tailwind v4 builds its
+ * utilities FROM custom properties: the drawing's numbers stay single-sourced and the page still
+ * gets responsive variants (the artboard is a fixed 1440 and has to collapse to a phone).
+ *
+ * ⛔ Never style this site with Tailwind's DEFAULT scale — `emerald-700`, `text-4xl`,
+ *   `rounded-2xl`, `gray-200`. Those are another design system's numbers, and a page built from
+ *   them looks NEARLY like its drawing, which is the one failure the artboards exist to prevent.
+ */
+@theme {
+    --color-bg: #fcfbfe;
+    --color-bg-tint: #f4f1fb;
+    --color-surface: #f4f1fb;
+    --color-surface-2: #ebe7f5;
+    --color-line: rgba(20, 16, 30, 0.12);
+    --color-line-strong: rgba(20, 16, 30, 0.28);
+    --color-ink: #16141c;
+    --color-ink-dim: #5b5766;
+    --color-ink-faint: #8b8796;
+    --color-accent: #15803d;
+    --color-accent-soft: #106430;
+    --color-accent-ink: #ffffff;
+    --color-accent-wash: rgba(16, 100, 48, 0.1);
+    --color-accent-edge: rgba(16, 100, 48, 0.25);
+
+    --font-display: "Newsreader", Georgia, serif;
+    --font-text: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    /* ⛔ NOT `--font-sans`. That is Tailwind's DEFAULT namespace: it becomes
+       `--default-font-family`, which preflight applies to `html` — so parking the Khmer face there
+       would set every English paragraph in Noto Sans Khmer. Name the special-purpose face by name. */
+    --font-khmer: "Noto Sans Khmer", sans-serif;
+
+    --radius-card: 1.25rem;
+    --radius-control: 1rem;
+    --radius-pill: 999px;
+
+    /* The artboard's display sizes, fluid. The drawing fixes a PROPORTION at 1440; a phone needs
+       the proportion, not the pixel, so each clamps down rather than scaling the page. */
+    --text-hero: clamp(2.1rem, 6vw, 3.4rem);
+    --text-section: clamp(1.5rem, 3vw, 1.9rem);
+    --text-lede: clamp(1.05rem, 2vw, 1.22rem);
+    --text-eyebrow: 0.72rem;
+}
+
+/*
+ * ⭐ DARK IS DERIVED, NOT REDRAWN. The artboards are light-ground only, so a second hand-drawn
+ *   palette would be a design nobody has reviewed. These invert the same tokens in place.
+ * ⚠️ The accent is the one value that is not a straight inversion: `#15803d` on a near-black
+ *   ground fails contrast beside body text, so it lightens.
+ * ⭐ Unlayered on purpose — Tailwind emits `@theme` inside `@layer theme`, and an unlayered rule
+ *   beats any layered one regardless of specificity.
+ */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg: #0f0e13;
+        --color-bg-tint: #17161d;
+        --color-surface: #17161d;
+        --color-surface-2: #201e28;
+        --color-line: rgba(255, 255, 255, 0.12);
+        --color-line-strong: rgba(255, 255, 255, 0.3);
+        --color-ink: #f4f2f8;
+        --color-ink-dim: #b3aec0;
+        --color-ink-faint: #85808f;
+        --color-accent: #2ea55c;
+        --color-accent-soft: #46bd73;
+        --color-accent-ink: #0f0e13;
+        --color-accent-wash: rgba(46, 165, 92, 0.12);
+        --color-accent-edge: rgba(46, 165, 92, 0.3);
+    }
+}
+
+/*
+ * ⛔ THE BASE TYPE IS A DESIGN TOKEN TOO. `Main.dc.html` states `font-size:16px;
+ * line-height:1.65`; without this rule preflight supplies 1.5 and every paragraph reads tighter
+ * than its drawing. `tokens:check` requires it.
+ * ⭐ There are no shadow roots on this site any more, so `body` is the whole story — the `:host`
+ *   restatement the Lit build needed (preflight's `html, :host` rule landing on every component)
+ *   has nothing left to reach.
+ */
+body {
+    font-size: 16px;
+    line-height: 1.65;
+}
+
+/* The two values `brand/motion.css`'s `.beating` reads — the layer's own (`tokens.css` v1.3.0): a
+   1500ms cycle and NO delay, so the mark beats on paint. ⛔ The 450ms rest is not here; it is the
+   70%→100% stop in the keyframes, part of the waveform and therefore of the signature. */
+:root {
+    --beat-duration: 1.5s;
+    --beat-delay: 0s;
+}
+
+/* The artboard's 56px gutter at 1440, fluid below it — one rule, so the header, every page and
+   the footer share one left edge on a phone. */
+.gutter {
+    padding-inline: clamp(20px, 4vw, 56px);
+}
+
+/*
+ * ⛔⛔ THE B-WORDMARK'S GEOMETRY — MEASURED, NOT TUNED BY EYE. Canon: `mark.geometry` in
+ *     `brand.333.eco/data/brand.json`, rendered at `brand.333.eco/wordmark/`.
+ *
+ * The emblem path fills only 75.34% of its 24×24 viewBox, and it is NOT centred in it: the four
+ * insets are left .15343 · right .09312 · top .09312 · bottom .15333. So the margin box is pulled
+ * in to the painted mark by its own four insets — then the footprint IS the mark, the line box
+ * stops being driven by the larger svg box, and an `<svg>`'s baseline (its bottom margin edge)
+ * becomes the mark's own bottom, so plain `vertical-align: baseline` seats it with no fudge.
+ * ⛔ Never `transform: scale()` for any of it — `.beating` animates `transform` and would
+ *   silently eat the correction.
+ */
+.b-wordmark {
+    --emblem-fill: 0.7534;
+
+    /* ⭐ THE ONE NUMBER THAT IS OURS: every size below is a RATIO TO CAP HEIGHT, and cap height
+       belongs to the display face (sig-ok: a typeface, not a person's). The layer's 0.723em is
+       Public Sans; this site sets display type in Newsreader, measured at .7083 (canvas
+       `actualBoundingBoxAscent` on an `H`, against a four-face control). */
+    --emblem-cap: 0.7083em;
+
+    /* How much taller than a capital H the mark stands. 1.04 reads as LEVEL (a round shape needs
+       ~4% overshoot to look equal to a flat-topped capital); 1.18 reads as a logo dropped into a
+       word. 1.10 is the layer's. Purely optical — every margin is derived from it. */
+    --emblem-rise: 1.1;
+
+    /* The rotated heart carries its mass low-left, so it reads close to the letter before it.
+       Carried as the layer's own RATIO (1px at 64px) rather than its absolute 1px, which at this
+       header's 18.4px would be three and a half times the nudge. Spent through the margins, so
+       the mark moves and the letters do not. */
+    --emblem-nudge-x: 0.0156em;
+
+    --emblem-size: calc(var(--emblem-cap) * var(--emblem-rise));
+    --emblem-box: calc(var(--emblem-size) / var(--emblem-fill));
+}
+
+.b-wordmark svg {
+    /* ⚠️ Preflight sets `svg { display: block }`, which would drop the mark onto its own line. */
+    display: inline-block;
+    width: var(--emblem-box);
+    height: var(--emblem-box);
+
+    /* ⛔ Four different numbers because the path is not centred — do not tidy them into one. */
+    margin-top: calc(var(--emblem-box) * -0.09312);
+    margin-bottom: calc(var(--emblem-box) * -0.15333);
+    margin-left: calc(var(--emblem-box) * -0.15343 + var(--emblem-nudge-x));
+    margin-right: calc(var(--emblem-box) * -0.09312 - var(--emblem-nudge-x));
+
+    /* Load-bearing, so stated: the margin box above is what makes the plain baseline correct.
+       ⛔ Never re-tune by eye — a hand-tuned value moves the line box with it (slope ≈ −0.39, not
+       −1), so it can look landed while the size and the insets are both wrong underneath. */
+    vertical-align: baseline;
+}

@@ -1,0 +1,452 @@
+name: Prior-art snapshot
+
+# Automates the Internet Archive leg of the snapshot wave — the INCREMENTAL half.
+#
+#   push to main/master   -> submit ONLY the pages this push changed (rules below).
+#                            A publish push is about a minute, not ~48.
+#   Run workflow (manual) -> "mode" input: changed (default) or full (whole manifest).
+#
+# ⭐ THE FULL REFRESH NO LONGER RUNS HERE. Since 2026-09-05 it runs in ONE PUBLIC
+# repository, 333eco/snapshot.333.eco, DAILY at 06:00 UTC (weekly until that day),
+# for every host in the estate: it reads each site's LIVE sitemap.xml, every tracked paper in the public
+# corpus repositories, and a short list of extra URLs (redirects, unlisted pages).
+# Actions minutes bill the OWNER of a private repository; the Sunday runs across
+# 22 private repositories cost ~580 minutes a month, and in a public repository
+# they cost nothing — which is also why the cadence could go daily. That is a
+# property of where the job runs, not a budget anyone has to watch. It also retires, for this file, the caveat that GitHub
+# pauses scheduled workflows after 60 days of inactivity: nothing here is scheduled.
+#
+# archive.today resists automation (anti-bot), so the job emits a prefilled
+# clickable link per URL in the run summary. The estate runs that leg with the
+# `/snapshot` skill over the corpus papers; these links cover anything else.
+# ⛔ perma.cc is NOT offered: its free tier is ten links on a ONE-TIME trial, so
+# it cannot mirror a corpus and the estate holds no perma.cc leg (ruled
+# 2026-09-05). Do not re-add it to these summaries.
+#
+# WHAT A PUSH SUBMITS (mode=changed). A URL is submitted when EITHER
+#   (a) its dedicated source file changed in the diff range —
+#         src/pages<url-path>.ts          (path-mirrored page file)
+#         src/pages/content/<slug>.ts     (flat content module; <slug> = last segment)
+#         web/src<url-path>/index.html    (MPA route)
+#         src/pages/home.ts · web/src/index.html   (the homepage "/")
+#   — OR
+#   (b) its line was ADDED to snapshot-urls.txt in the diff range, so a new
+#       page's first capture happens on the push that lists it, not next morning.
+# Everything else is SKIPPED and left to the daily full run:
+#   · raw.githubusercontent.com corpus sources — they live in the publications
+#     repositories and cannot change in a push to THIS one;
+#   · category / index pages with no dedicated file — re-archived daily.
+# Until 2026-09-05 those two classes were submitted on EVERY push (110 of
+# thonly.org's 231 URLs), which is what made a "seconds" job take 48 minutes.
+#
+# THE DIFF RANGE is <last completed run of this workflow on this branch>..HEAD,
+# not github.event.before..HEAD. It matters because of the concurrency rule
+# below: when a burst of pushes supersedes a run part-way, the pages it never
+# reached are picked up by the next run instead of waiting for the daily one. "Completed"
+# means success or failure; a cancelled or timed-out run is never a base.
+# ⚠️ THAT REST ON AN INVARIANT THE STEP MUST KEEP: a failed run must still have run
+# the submit loop TO THE END, or the URLs it never reached are dropped from the push
+# leg entirely — this base skips past them. It was FALSE from 2026-09-05 until the
+# same day: errexit let a curl timeout abort the loop mid-way while the run was
+# still recorded `failure` and still became the next base. Hence the `|| true` on
+# the submit curl. Anything added to that loop must fail open for the same reason. With no such run, or one whose commit is not an
+# ancestor of HEAD (force-push, new branch), the base falls back to
+# github.event.before; if that is unusable too, the run submits everything.
+#
+# CONCURRENCY: one run per branch; a newer push cancels an older run still in
+# progress. Safe only because of the diff-range rule above — the run that
+# cancels redoes the cancelled run's work.
+#
+# TIMEOUT: 150 minutes. A push that legitimately touches every module (a
+# corpus-wide sweep) needs ~2 h at ~30 s per URL; the cap is against the
+# pathological run, not the busy one. The per-URL curl limit is 30 s (was 90):
+# Save Page Now answers in ~18 s when healthy, and a slow answer is almost
+# always a capture that already began server-side. The submit response code is
+# a heuristic either way — the authoritative check is the CDX API.
+#
+# paths-ignore: proof rotation (timestamps/**, TIMESTAMPS.md, *.ots) changes no
+# served page, so it does not run this; a commit that ALSO edits a page still
+# does. Harmless in repositories that have none of those paths.
+#
+# SPA note: if the site is a Lit/Firebase SPA, Internet Archive's Save Page Now
+# runs JS and captures the route + rendered metadata at a timestamp; imperfect
+# SPA fidelity is an accepted prior-art limitation. ⚠️ For a REDIRECT it follows
+# the hop and records the TARGET, not the 301 — verified 2026-09-05, when the
+# heartbank.net research-mirror redirects turned out to have 301 rows from June
+# and none since, despite months of submissions. A rename is therefore captured
+# ONCE, the day it ships: submit the old URL then and confirm a 301 row in the
+# CDX. Listing a redirect in a manifest afterwards adds nothing, which is why
+# those twelve were retired.
+#
+# This workflow file is intentionally IDENTICAL across all site repos; the MPA
+# route shape and the proof-rotation ignore that once made two copies diverge
+# are folded in. Per-repo variation lives only in each repo's snapshot-urls.txt
+# + its source tree. Keep them in sync; do not diverge one without the others.
+
+on:
+  push:
+    branches: [main, master]
+    paths-ignore:
+      - "timestamps/**"
+      - "TIMESTAMPS.md"
+      - "**/*.ots"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "changed = only pages changed since the last completed run (the push behaviour); full = whole manifest"
+        type: choice
+        options: [changed, full]
+        default: changed
+
+permissions:
+  contents: read
+  actions: read # to find the last completed run — the diff base
+
+concurrency:
+  group: snapshot-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find the diff base
+        id: base
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          set -uo pipefail
+          BASE=""
+          # The newest completed (success|failure) run of THIS workflow on THIS branch.
+          LAST="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/snapshot.yml/runs?branch=${GITHUB_REF_NAME}&status=completed&per_page=20" \
+                    --jq '[.workflow_runs[] | select(.conclusion=="success" or .conclusion=="failure")][0].head_sha // empty' 2>/dev/null || true)"
+          if [ -n "$LAST" ] && git cat-file -e "${LAST}^{commit}" 2>/dev/null \
+             && git merge-base --is-ancestor "$LAST" HEAD 2>/dev/null; then
+            BASE="$LAST"
+            echo "Base = last completed run: $LAST"
+          elif [ -n "${PUSH_BEFORE:-}" ] \
+               && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ] \
+               && git cat-file -e "${PUSH_BEFORE}^{commit}" 2>/dev/null; then
+            BASE="$PUSH_BEFORE"
+            echo "Base = push base: $PUSH_BEFORE (no usable completed run)"
+          else
+            echo "No usable base; a changed-mode run will submit the whole manifest."
+          fi
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Submit to Internet Archive + emit manual links
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_MODE: ${{ github.event.inputs.mode }}
+          BASE: ${{ steps.base.outputs.base }}
+        run: |
+          set -uo pipefail
+          MANIFEST="snapshot-urls.txt"
+          if [ ! -f "$MANIFEST" ]; then
+            echo "No $MANIFEST in repo root; nothing to snapshot." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Resolve mode: push => changed; dispatch => input (default changed).
+          case "$EVENT_NAME" in
+            workflow_dispatch) MODE="${DISPATCH_MODE:-changed}" ;;
+            *)                 MODE=changed ;;
+          esac
+
+          # In changed mode: files changed in the range, and manifest lines added in it.
+          CHANGED=""
+          ADDED=""
+          if [ "$MODE" = "changed" ]; then
+            if [ -z "${BASE:-}" ]; then
+              echo "No diff base; falling back to full submit."
+              MODE=full
+            else
+              CHANGED="$(git diff --name-only "$BASE" HEAD)"
+              ADDED="$(git diff --unified=0 "$BASE" HEAD -- "$MANIFEST" \
+                        | grep -E '^\+[^+]' | sed 's/^+//; s/#.*//' | xargs -n1 2>/dev/null || true)"
+            fi
+          fi
+          echo "Mode: $MODE   base: ${BASE:-none}"
+
+          # Returns 0 (skip) or 1 (submit). See the header for the rules.
+          skip_url() {
+            [ "$MODE" = "full" ] && return 1
+            local url="$1" p last cand="" c
+            case "$url" in
+              *raw.githubusercontent.com/*) return 0 ;;                # corpus source: daily run only
+            esac
+            printf '%s\n' "$ADDED" | grep -Fxq "$url" && return 1     # newly listed: first capture now
+            p="$(printf '%s' "$url" | sed -E 's#^[a-zA-Z]+://[^/]+##; s#[?#].*$##; s#/+$##')"
+            # CANDIDATE ORDER IS MOST-SPECIFIC FIRST, and the last two are the
+            # flat-static-site forms. The estate runs FOUR page layouts and this
+            # list knew two of them until 2026-09-06: `src/pages/<name>/index.ts`
+            # (thank.heartbank.org, 43 page directories) and repo-root HTML
+            # (missaquarius.org's letters, missaquarius.com) matched nothing, so
+            # every one of their URLs sat outside the push leg.
+            # ⛔ PATH-DERIVED ONLY — never a bare root index.html fallback for a
+            # non-root URL. On a SPA that maps every route to the shell: a push
+            # touching index.html would re-archive everything and a push touching
+            # the real component would archive nothing.
+            if [ -z "$p" ]; then
+              for c in src/pages/home.ts src/pages/home/index.ts web/src/index.html index.html; do
+                [ -f "$c" ] && { cand="$c"; break; }
+              done
+            else
+              last="${p##*/}"
+              rel="${p#/}"
+              for c in "web/src${p}/index.html" "src/pages${p}.ts" "src/pages${p}/index.ts" \
+                       "src/pages/content/${last}.ts" "$rel" "$rel/index.html"; do
+                [ -f "$c" ] && { cand="$c"; break; }
+              done
+            fi
+            # ⭐ RECORD THE FACT, not the policy. A URL with no dedicated source
+            # file is invisible to this leg, and nothing ever said which ones —
+            # /research/program sat outside it for months because its component
+            # is research-program.ts against a path-mirrored lookup. The drift
+            # step below decides which of these are INTENDED (a `# daily` marker
+            # in the manifest) and reports the rest.
+            # ⚠️ `|| true`: the header's invariant is that this loop must run to
+            # the end even when something in it fails. Anything added here fails open.
+            if [ -z "$cand" ]; then
+              printf '%s\n' "$url" >> "${RUNNER_TEMP:-/tmp}/unmapped.txt" 2>/dev/null || true
+              return 0                                                 # no dedicated file: daily run only
+            fi
+            printf '%s\n' "$CHANGED" | grep -Fxq "$cand" && return 1   # its source changed: submit
+            return 0                                                   # mapped + unchanged: skip
+          }
+
+          {
+            echo "## Prior-art snapshot — $(date -u '+%Y-%m-%d %H:%M UTC') — mode: \`$MODE\`"
+            echo ""
+            echo "Internet Archive submitted automatically. **archive.today** is a browser leg — the estate runs it with the \`/snapshot\` skill over the corpus papers, and the per-URL links below cover anything else."
+            echo "The response code is a heuristic (a 404 has accompanied a successful capture); the authoritative check is the CDX API. The daily full run in \`333eco/snapshot.333.eco\` re-archives every page regardless."
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          submitted=0
+          skipped=0
+          while IFS= read -r raw || [ -n "$raw" ]; do
+            url="$(echo "$raw" | sed 's/#.*//' | xargs)"
+            [ -z "$url" ] && continue
+            if skip_url "$url"; then
+              echo "Skipped (unchanged, or daily-run-only): $url"
+              skipped=$((skipped + 1))
+              continue
+            fi
+            enc="$(jq -rn --arg u "$url" '$u|@uri')"
+            echo "Submitting to Internet Archive: $url"
+            if [ -n "${DRY_RUN:-}" ]; then
+              code=DRY
+            else
+              # `|| true` is LOAD-BEARING. GitHub runs this step as `bash -e`, and the
+              # step's own `set -uo pipefail` adds options without clearing errexit —
+              # so a curl timeout (exit 28, routine when Save Page Now is slow) killed
+              # the whole step mid-loop until 2026-09-05, and the `${code:-000}` line
+              # below, written to absorb exactly that, was never reached. Submission is
+              # fail-open BY DESIGN: the response code is a heuristic, the CDX API is
+              # authoritative, and the daily full run re-archives everything regardless.
+              code="$(curl -s -L -m 30 -o /dev/null -w '%{http_code}' \
+                -A 'HeartBank-snapshot-bot (+https://heartbank.net)' \
+                "https://web.archive.org/save/$url" || true)"
+              code="${code:-000}"   # a timeout already prints 000; never double it
+            fi
+            echo "  Internet Archive HTTP $code"
+            submitted=$((submitted + 1))
+            {
+              echo "### \`$url\`"
+              echo ""
+              echo "- 🗄️ **Internet Archive** — submitted (HTTP $code) · [view captures](https://web.archive.org/web/*/$url)"
+              echo "- 📎 **archive.today** — *click to capture:* https://archive.ph/?url=$enc"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+            [ -n "${DRY_RUN:-}" ] || sleep 12
+          done < "$MANIFEST"
+
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "_Submitted $submitted · skipped $skipped · mode \`$MODE\` · base \`${BASE:-none}\`._" >> "$GITHUB_STEP_SUMMARY"
+          echo "Done ($MODE): submitted $submitted, skipped $skipped. Open the job summary for the archive.today links."
+
+      # ── Manifest drift check ──────────────────────────────────────────────
+      # snapshot-urls.txt is hand-maintained, and a route that is not listed is
+      # simply never archived by THIS job. Until this step existed NOTHING reported
+      # that: an audit on 2026-08-15 found thonly.org's own homepage plus three
+      # shipped papers missing, and two missaquarius letters absent from both
+      # lists. The generator that is supposed to wire the sitemap and the
+      # manifest together had half-fired and said nothing.
+      #
+      # Two questions, both answered against the sitemap as the authoritative set
+      # of public routes:
+      #   1. Is every sitemap route in the manifest?  (else: never archived on push)
+      #   2. Would the daily full run in 333eco/snapshot.333.eco reach every
+      #      manifest URL?  It reads the LIVE sitemap, the public corpora and
+      #      extra-urls.txt — so a manifest URL that is in none of those (a
+      #      redirect, an unlisted page) is archived by nobody once the full run
+      #      moved out of this repo. That repository is public, so the check needs no
+      #      token; if it cannot be fetched the check WARNS and does not fail.
+      #
+      # Runs LAST and with if:always(), so the pages that ARE listed still get
+      # archived on this run — but an omission turns the run red instead of
+      # passing in silence. Extra manifest entries beyond the sitemap are NOT
+      # drift in themselves: the manifest deliberately also carries the
+      # raw.githubusercontent.com markdown sources and 301-redirect URLs.
+      - name: Manifest drift check
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'DRIFT_EOF'
+          import os, re, sys, pathlib, urllib.request
+
+          MANIFEST = pathlib.Path("snapshot-urls.txt")
+          SITEMAPS = ["web/static/sitemap.xml", "static/sitemap.xml", "public/sitemap.xml", "sitemap.xml", "dist/sitemap.xml"]
+          PUBLIC_RUNNER = "https://raw.githubusercontent.com/333eco/snapshot.333.eco/main/"
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+
+
+          def out(line=""):
+              print(line)
+              if summary:
+                  with open(summary, "a") as fh:
+                      fh.write(line + "\n")
+
+
+          def fetch_list(name):
+              with urllib.request.urlopen(PUBLIC_RUNNER + name, timeout=20) as r:
+                  text = r.read().decode("utf-8", "replace")
+              return [l.split("#")[0].strip() for l in text.splitlines() if l.split("#")[0].strip()]
+
+
+          if not MANIFEST.exists():
+              out("No snapshot-urls.txt — nothing to check.")
+              sys.exit(0)
+
+          sitemap = next((pathlib.Path(c) for c in SITEMAPS if pathlib.Path(c).exists()), None)
+          if sitemap is None:
+              out("No sitemap.xml found — drift cannot be checked in this repo.")
+              sys.exit(0)
+
+          manifest = {
+              l.split("#")[0].strip()
+              for l in MANIFEST.read_text().splitlines()
+              if l.split("#")[0].strip()
+          }
+          routes = set(re.findall(r"<loc>\s*(.*?)\s*</loc>", sitemap.read_text()))
+
+          # A trailing slash is the same page. Compare on a normalised key so that
+          # "https://x.org/" and "https://x.org" never register as drift.
+          norm = lambda u: u.rstrip("/")
+          have = {norm(u) for u in manifest}
+          missing = sorted(u for u in routes if norm(u) not in have)
+
+          out("")
+          out("### Manifest drift")
+          out("")
+          out(f"`{sitemap}` declares **{len(routes)}** public routes; "
+              f"`snapshot-urls.txt` lists **{len(manifest)}** URLs.")
+          out("")
+
+          # ── routes the PUSH leg cannot see ──────────────────────────────────
+          # The submit step recorded every URL it found no dedicated source file
+          # for. That is a FACT about the tree; whether it is a PROBLEM is a
+          # policy, and the policy lives in the manifest: a line carrying a
+          # `# daily` comment declares that it has no source file BY DESIGN — a
+          # category or index page rendered by a shared component, re-archived by
+          # the daily full run.
+          #
+          # ⚠️ Reported, never failed. These URLs are still archived daily; red
+          # is reserved for a sitemap route missing from the manifest entirely.
+          # ⛔ `# daily` means "intentionally has no dedicated file", never
+          # "nobody looked". Marking a fixable mapping gap silences the only
+          # instrument that would have found it.
+          unmapped_path = os.path.join(os.environ.get("RUNNER_TEMP", "/tmp"), "unmapped.txt")
+          intentional = {
+              line.split("#")[0].strip()
+              for line in MANIFEST.read_text().splitlines()
+              if "#" in line and "daily" in line.split("#", 1)[1]
+          }
+          try:
+              recorded = [l.strip() for l in open(unmapped_path) if l.strip()]
+          except OSError:
+              recorded = None
+
+          if recorded is None:
+              out("_Push-leg mapping not computed on this run (full mode, or the "
+                  "submit step did not reach the loop)._")
+          else:
+              surprises = sorted(set(recorded) - intentional)
+              if surprises:
+                  out(f"⚠️ **{len(surprises)} listed URL(s) have no source file the push "
+                      "leg can watch**, so they are archived only by the daily run:")
+                  out("")
+                  for u in surprises:
+                      out(f"- {u}")
+                  out("")
+                  out("Either rename the page onto the path mirror "
+                      "(`src/pages<url-path>.ts`), or append `# daily` to its manifest "
+                      "line to say the absence is intended.")
+              else:
+                  out(f"Push-leg mapping: every listed URL is either watched or marked "
+                      f"`# daily` ({len(intentional)} marked).")
+          out("")
+
+          failed = False
+          if missing:
+              failed = True
+              out(f"⚠️ **{len(missing)} route(s) are in the sitemap but NOT in "
+                  "`snapshot-urls.txt`, so they are never submitted on push:**")
+              out("")
+              for u in missing:
+                  out(f"- `{u}`")
+              out("")
+              out("Add each line to `snapshot-urls.txt` and push. If a route should "
+                  "deliberately never be archived, keep it out of the sitemap too.")
+          else:
+              out("✅ Every route in the sitemap is in the archive manifest.")
+
+          # 2. Coverage by the daily full run.
+          try:
+              hosts = set(fetch_list("hosts.txt"))
+              corpora = fetch_list("corpora.txt")
+              extras = {norm(u) for u in fetch_list("extra-urls.txt")}
+          except Exception as e:  # network, or the repo moved — warn, never fail on this
+              print(f"::warning::could not read 333eco/snapshot.333.eco ({e}); full-run coverage not checked")
+              sys.exit(1 if failed else 0)
+
+          site_urls = [u for u in manifest if "raw.githubusercontent.com/" not in u]
+          host = re.sub(r"^https?://([^/]+).*", r"\1", sorted(site_urls)[0]) if site_urls else None
+          route_keys = {norm(u) for u in routes}
+          raw_prefixes = tuple(f"https://raw.githubusercontent.com/{r}/" for r in corpora)
+
+          uncovered = sorted(
+              u for u in manifest
+              if norm(u) not in route_keys
+              and not u.startswith(raw_prefixes)
+              and norm(u) not in extras
+          )
+          out("")
+          out("### Daily full-run coverage (`333eco/snapshot.333.eco`)")
+          out("")
+          if host and host not in hosts:
+              failed = True
+              out(f"⚠️ **`{host}` is not in `hosts.txt`** — the daily full run never reads this site's sitemap. Add it.")
+          if uncovered:
+              failed = True
+              out(f"⚠️ **{len(uncovered)} manifest URL(s) are in neither the sitemap, a listed corpus, nor `extra-urls.txt`** — nobody re-archives them in the daily run:")
+              out("")
+              for u in uncovered:
+                  out(f"- `{u}`")
+              out("")
+              out("Add each to `extra-urls.txt` in `333eco/snapshot.333.eco` (or to the sitemap, if it is a real route).")
+          if host in hosts and not uncovered:
+              out(f"✅ `{host}` is listed, and every manifest URL is reachable by the daily run.")
+          sys.exit(1 if failed else 0)
+          DRIFT_EOF

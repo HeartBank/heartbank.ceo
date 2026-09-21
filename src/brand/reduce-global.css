@@ -1,0 +1,29 @@
+/* ============================================================================
+   REDUCED MOTION — the estate-wide sweep (OPT-IN)
+   ----------------------------------------------------------------------------
+   Load after motion.css, which already ships the scoped `.beating` guard. This
+   file adds the blanket rule that neutralises EVERY animation and transition on
+   the page.
+
+   ⚠️ IT IS OPT-IN, AND THAT IS A DELIBERATE DIVERGENCE RATHER THAN AN
+   OMISSION. seysays gates each of its animations at its own site with
+   `(prefers-reduced-motion: no-preference)` — site.css's smooth scroll,
+   tonsay.css's panel, app.ts's sheet — which reaches the same outcome by a
+   different discipline. Dropping this sweep into that repo would silently
+   restyle shipped code that already honours the preference. If the sweep is
+   ever wanted there, it is a decision about those three animation sites, not a
+   tidy-up of this package.
+
+   Taken by: sayyourname.app, playsey.app, 333.eco.
+   Not taken by: seysays.org.                                                 */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

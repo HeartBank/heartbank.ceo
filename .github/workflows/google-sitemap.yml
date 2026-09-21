@@ -1,0 +1,196 @@
+name: Google Sitemap
+
+# Refreshes the site's sitemap in Google Search Console via the official
+# Sitemaps API. This is the sanctioned Google equivalent of IndexNow:
+# the Indexing API is officially restricted to Job Postings + BroadcastEvent
+# only, so the only supported automation for general pages is to keep
+# Google's view of the sitemap current.
+#
+# The job tries the **Domain property** form (`sc-domain:host`) first since
+# that's the modern recommended verification (DNS TXT covers all subdomains
+# and protocols). For a subdomain it then falls back to the **apex** Domain
+# property (`sc-domain:registrable-domain`) — which a DNS-verified apex already
+# covers — and finally to the **URL-prefix** form (`https://host/`). Fallback
+# fires on 403 (SA not an owner of that exact property) as well as 404.
+#
+# ONE-TIME SETUP (per repo):
+#   1. Verify the site in Google Search Console (Domain property via DNS TXT
+#      is recommended): https://search.google.com/search-console
+#   2. Create a Google Cloud project + service account:
+#      https://console.cloud.google.com/iam-admin/serviceaccounts
+#      Enable the **Search Console API** for that project.
+#      Create a JSON key for the service account and download it.
+#   3. In Google Search Console for the property, go to Settings → Users and
+#      permissions → Add user. Paste the service-account email
+#      (xxx@xxx.iam.gserviceaccount.com), grant **Owner** permission.
+#   4. In this repo: Settings → Secrets and variables → Actions → New
+#      repository secret. Name: GOOGLE_SITEMAP_CREDENTIALS. Value: the
+#      full contents of the service-account JSON key file.
+#
+# Without GOOGLE_SITEMAP_CREDENTIALS the workflow skips gracefully and
+# logs a one-line instruction in the run summary.
+#
+# This workflow file is intentionally IDENTICAL across the thonly.org,
+# heartbank.net, missaquarius.org, and missaquarius.com repos. Keep them
+# in sync.
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "static/sitemap.xml"
+      - "sitemap.xml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check setup
+        id: check
+        env:
+          HAS_CREDS: ${{ secrets.GOOGLE_SITEMAP_CREDENTIALS != '' }}
+        run: |
+          if [ "$HAS_CREDS" = "true" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Google Sitemap — skipped"
+              echo ""
+              echo "\`GOOGLE_SITEMAP_CREDENTIALS\` secret is not set. See workflow header for one-time setup."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - id: auth
+        if: steps.check.outputs.configured == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_SITEMAP_CREDENTIALS }}
+          create_credentials_file: false
+          export_environment_variables: false
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/webmasters
+
+      - name: Refresh sitemap in Google Search Console
+        if: steps.check.outputs.configured == 'true'
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set -uo pipefail
+
+          # Locate sitemap (static/sitemap.xml for SPAs, sitemap.xml for static sites).
+          SITEMAP=""
+          for p in static/sitemap.xml sitemap.xml; do
+            if [ -f "$p" ]; then SITEMAP="$p"; break; fi
+          done
+          if [ -z "$SITEMAP" ]; then
+            echo "No sitemap.xml; nothing to ping." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Capture then slice: piping grep straight into `head -1` makes grep
+          # race a SIGPIPE ("write error: Broken pipe", exit 2) on large
+          # sitemaps, which `-e -o pipefail` turns into a failed job.
+          ALL_LOCS=$(grep -oE '<loc>[^<]+</loc>' "$SITEMAP" || true)
+          FIRST=$(head -1 <<< "$ALL_LOCS" | sed -E 's|</?loc>||g')
+          if [ -z "$FIRST" ]; then
+            echo "No <loc> URLs in $SITEMAP."
+            exit 0
+          fi
+          HOST=$(echo "$FIRST" | sed -E 's|https?://([^/]+).*|\1|')
+          ORIGIN=$(echo "$FIRST" | sed -E 's|(https?://[^/]+).*|\1/|')
+          SITEMAP_URL="${ORIGIN}sitemap.xml"
+
+          DOMAIN_SITE="sc-domain:${HOST}"
+          # Registrable apex (last two labels) — all our TLDs are single-label
+          # (.com/.org/.net/.dev/.eco/.me/.us/.ceo), so last-two-labels is correct.
+          APEX=$(echo "$HOST" | awk -F. '{print $(NF-1)"."$NF}')
+          APEX_SITE="sc-domain:${APEX}"
+          URL_SITE="${ORIGIN}"
+          DOMAIN_ENC=$(jq -rn --arg u "$DOMAIN_SITE" '$u|@uri')
+          APEX_ENC=$(jq -rn --arg u "$APEX_SITE" '$u|@uri')
+          URL_ENC=$(jq -rn --arg u "$URL_SITE" '$u|@uri')
+          SITEMAP_ENC=$(jq -rn --arg u "$SITEMAP_URL" '$u|@uri')
+
+          API_DOMAIN="https://www.googleapis.com/webmasters/v3/sites/${DOMAIN_ENC}/sitemaps/${SITEMAP_ENC}"
+          API_APEX="https://www.googleapis.com/webmasters/v3/sites/${APEX_ENC}/sitemaps/${SITEMAP_ENC}"
+          API_URL="https://www.googleapis.com/webmasters/v3/sites/${URL_ENC}/sitemaps/${SITEMAP_ENC}"
+
+          {
+            echo "## Google Sitemap refresh — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "**Host:** \`$HOST\`  "
+            echo "**Sitemap:** $SITEMAP_URL"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          submit() {
+            local target="$1" label="$2"
+            local code
+            code=$(curl -sS -o /tmp/gsc.out -w '%{http_code}' -X PUT \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              -H 'Content-Length: 0' \
+              "$target" || echo 000)
+            echo "  → $label: HTTP $code" >&2
+            echo "$code"
+          }
+
+          echo "Trying Domain property (sc-domain:$HOST)..."
+          CODE=$(submit "$API_DOMAIN" "Domain property")
+          USED="Domain (\`sc-domain:$HOST\`)"
+
+          # Subdomain fallback: a DNS-verified apex Domain property already
+          # covers every subdomain. 403 means the SA isn't an owner of the
+          # exact sc-domain:HOST property (often because none exists), so retry
+          # on 403 as well as 404 — but only when the apex differs from HOST.
+          if { [ "$CODE" = "404" ] || [ "$CODE" = "403" ]; } && [ "$APEX" != "$HOST" ]; then
+            echo "Host property unavailable (HTTP $CODE); trying apex (sc-domain:$APEX)..."
+            CODE=$(submit "$API_APEX" "Apex Domain property")
+            USED="Domain (\`sc-domain:$APEX\`)"
+          fi
+
+          if [ "$CODE" = "404" ] || [ "$CODE" = "403" ]; then
+            echo "Domain property not found; trying URL-prefix ($ORIGIN)..."
+            CODE=$(submit "$API_URL" "URL-prefix")
+            USED="URL-prefix (\`$ORIGIN\`)"
+          fi
+
+          BODY=$(cat /tmp/gsc.out 2>/dev/null || true)
+          {
+            echo "**HTTP $CODE** — property type: $USED"
+            echo ""
+            if [ -n "$BODY" ]; then
+              echo '```'
+              echo "$BODY"
+              echo '```'
+              echo ""
+            fi
+            echo "_204 = success. The Google Indexing API is officially restricted to Job Postings / BroadcastEvent; sitemap refresh is the sanctioned automation for general pages._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          case "$CODE" in
+            200|204)
+              echo "✓ Google Search Console accepted (HTTP $CODE)"
+              exit 0
+              ;;
+            403)
+              echo "✗ HTTP 403 — service account not granted Owner permission, or Search Console API not enabled."
+              exit 1
+              ;;
+            404)
+              echo "✗ HTTP 404 — site not verified in Search Console under either Domain or URL-prefix form, or no permission."
+              exit 1
+              ;;
+            *)
+              echo "✗ HTTP $CODE"
+              exit 1
+              ;;
+          esac

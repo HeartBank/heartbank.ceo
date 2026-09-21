@@ -1,0 +1,33 @@
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Dark follows the operating system (src/styles.css); this tells the browser so its own
+     controls and scrollbars follow too. -->
+<meta name="color-scheme" content="light dark" />
+<meta name="apple-mobile-web-app-title" content="HeartBank®" />
+<meta property="og:site_name" content="HeartBank®" />
+<meta property="og:locale" content="en_US" />
+<!-- ⛔ ABSOLUTE, or every link preview renders with no image — and fails silently. -->
+<meta property="og:image" content="https://heartbank.ceo/assets/web-app-manifest-512x512.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://heartbank.ceo/assets/web-app-manifest-512x512.png" />
+
+<link rel="icon" type="image/png" href="/assets/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+<link rel="shortcut icon" href="/assets/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+<link rel="manifest" href="/assets/site.webmanifest" />
+
+<!-- ⭐ The artboard's three faces: Newsreader carries every display line, IBM Plex Sans the body,
+     IBM Plex Mono every eyebrow and label. ⛔ Not decoration — the drawing's whole register is
+     the serif/mono pairing, and system fonts read as a different site. Noto Sans Khmer is here
+     because this institution's customers read Khmer first. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Khmer:wght@400;500&display=swap" />
+<link rel="stylesheet" href="/src/styles.css" />
+
+<!-- Analytics: Cloudflare Web Analytics + the estate's first-party beacon to thonly.org. A plain
+     static script with no Firebase in it; it no-ops on local hosts. -->
+<script src="/analytics.js" defer></script>

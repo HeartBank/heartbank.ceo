@@ -1,0 +1,106 @@
+name: Deploy to GitHub Pages
+
+# Builds the site and deploys it to GitHub Pages on every push to main.
+#
+# ADAPTED FROM brand.333.eco's workflow. Two differences, both deliberate:
+#   1. THE ARTBOARDS ARE CHECKED OUT BESIDE THIS REPO. `npm run build` runs its prebuild guards,
+#      and check-tokens.mjs diffs src/styles.css against ../demo.heartbank.ceo/Main.dc.html — the
+#      design of record. demo.heartbank.ceo is public, so it needs no token; checking both out as
+#      siblings makes `../demo.heartbank.ceo` resolve here exactly as it does on a laptop, and the
+#      drawing-is-the-source guard runs before every deploy rather than only before a local build.
+#   2. The site is at the repo root, so the artifact is `dist`, not a subdirectory's.
+#
+# ⚠️ CNAME LIVES IN static/, which Vite copies into dist. Assert it survived the build: a missing
+#   CNAME on a Pages artifact is a working build and an unmapped domain, with nothing in the log.
+#
+# ONE-TIME SETUP (already done for this repo — recorded so a re-creation can repeat it):
+#   Settings → Pages → Build and deployment → Source → "GitHub Actions"; custom domain heartbank.ceo.
+#   DNS, outside this repo: the apex A records → GitHub Pages' four addresses, `www` CNAME →
+#   heartbank.github.io, all DNS-only (proxy OFF) or GitHub cannot issue the certificate.
+#
+# RE-RUN SAFETY: re-running a whole failed deploy uploads a second "github-pages" artifact and
+# deploy-pages aborts on seeing two. Prefer a fresh push or workflow_dispatch; the "Clear stale
+# Pages artifact" step also deletes any leftover so re-runs stay safe anyway.
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+    actions: write # delete stale github-pages artifacts so re-runs stay safe
+
+concurrency:
+    group: pages
+    cancel-in-progress: false
+
+jobs:
+    deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  path: heartbank.ceo
+
+            - name: Checkout the artboards (the design of record)
+              uses: actions/checkout@v4
+              with:
+                  repository: HeartBank/demo.heartbank.ceo
+                  path: demo.heartbank.ceo
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+
+            # prebuild runs the three guards first: check-brand (the vendored brand layer matches
+            # brand.lock) · check-tokens (the theme matches the artboard) · the kill switch parses.
+            - name: Build
+              working-directory: heartbank.ceo
+              run: npm ci && npm run build
+
+            - name: Assert CNAME survived the build
+              run: |
+                  test "$(cat heartbank.ceo/dist/CNAME)" = "heartbank.ceo" || {
+                    echo "::error::dist/CNAME is missing or wrong — the custom domain will unmap."
+                    exit 1
+                  }
+
+            - name: Setup Pages
+              uses: actions/configure-pages@v5
+
+            - name: Clear stale Pages artifact (safe re-runs)
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        run_id: context.runId,
+                      });
+                      for (const artifact of data.artifacts) {
+                        if (artifact.name === 'github-pages') {
+                          core.info(`Deleting stale artifact ${artifact.id}`);
+                          await github.rest.actions.deleteArtifact({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            artifact_id: artifact.id,
+                          });
+                        }
+                      }
+
+            - name: Upload artifact
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: heartbank.ceo/dist
+
+            - name: Deploy
+              id: deployment
+              uses: actions/deploy-pages@v4

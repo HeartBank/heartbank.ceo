@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <!--#include head-->
+        <title>Nothing at this address — HeartBank® CEO</title>
+        <meta name="description" content="The page you asked for is not here." />
+        <!-- ⭐ Hidden from search BY NAME, never by a blanket `robots` meta: a link-preview crawler
+             can read the blanket form as "do not process this page" too. -->
+        <meta name="googlebot" content="noindex" />
+        <meta name="bingbot" content="noindex" />
+    </head>
+    <!--
+      Every unknown path. GitHub Pages serves this file with a real 404 status — which is the point
+      of the static rebuild: the old single-page app answered every address with 200 and the app's
+      own body, so a crawler could not tell a missing page from a real one.
+
+      ⛔⛔ IT USED TO SAY "COMING SOON!", AND THAT WAS A CLAIM ABOUT THE WORLD, NOT A STYLE PROBLEM.
+          A mistyped address is not a page under construction; the string was inherited from a
+          shell where every route genuinely was unbuilt.
+      ⭐ And it offers the way back — the one thing a lost visitor needs is the front door.
+      ⚠️ Every URL here is absolute (`/assets/…`, `/src/…` → built to `/assets/…`): this file is
+         served at whatever depth the missing path had.
+    -->
+    <body class="bg-bg text-ink font-text min-h-screen flex flex-col">
+        <!--#include header-->
+
+        <main class="flex-1">
+            <section class="gutter mx-auto max-w-[70ch] pt-20 pb-24">
+                <p class="font-mono text-eyebrow tracking-[0.06em] uppercase text-ink-faint m-0">404</p>
+                <h1 class="font-display text-hero leading-[1.04] tracking-[-0.035em] font-medium mt-[18px] mb-6 max-w-[16ch]" data-km="គ្មានអ្វីនៅអាសយដ្ឋាននេះទេ។">Nothing at this address.</h1>
+                <p class="text-lede leading-[1.5] text-ink-dim m-0 mb-8 max-w-[44ch]" data-km="ទំព័រដែលអ្នកស្វែងរក មិនមាននៅទីនេះទេ។">The page you asked for is not here.</p>
+                <a href="/" class="inline-block bg-accent text-accent-ink px-[26px] py-3.5 rounded-control font-medium text-base no-underline hover:no-underline hover:opacity-90" data-km="ត្រឡប់ទៅការិយាល័យ">Back to the office</a>
+            </section>
+        </main>
+
+        <!--#include footer-->
+
+        <!-- ⭐ Khmer for a visitor in Cambodia — the same rule the app used (the Phnom Penh time zone),
+             kept so the rebuild does not drop it. English is the markup, so with scripts off
+             the page still reads correctly. The Khmer is carried over verbatim from the
+             single-page build's strings; this file is now its only home. -->
+        <script>
+            try {
+                if (Intl.DateTimeFormat().resolvedOptions().timeZone === "Asia/Phnom_Penh") {
+                    for (const el of document.querySelectorAll("[data-km]")) {
+                        el.textContent = el.dataset.km;
+                        el.lang = "km";
+                        el.classList.add("font-khmer");
+                    }
+                }
+            } catch (e) {}
+        </script>
+    </body>
+</html>

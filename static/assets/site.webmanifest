@@ -1,0 +1,35 @@
+{
+    "name": "HeartBank® CEO",
+    "short_name": "CEO",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "aqua",
+    "theme_color": "aqua",
+    "description": "Thank with HeartBank®",
+    "icons": [
+        {
+            "src": "./web-app-manifest-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "./web-app-manifest-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "categories": [
+        "social",
+        "lifestyle",
+        "entertainment",
+        "productivity",
+        "education"
+    ],
+    "orientation": "any",
+    "screenshots": [],
+    "lang": "en-US",
+    "dir": "ltr",
+    "scope": "/"
+}

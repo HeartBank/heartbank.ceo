@@ -1,0 +1,114 @@
+name: IndexNow
+
+# Submits all canonical URLs in sitemap.xml to IndexNow on push.
+# IndexNow (https://www.indexnow.org/) is the open protocol Bing, Yandex,
+# Naver, Seznam, and others use for push-based indexing notifications.
+# Google has explicitly stated it does not participate in IndexNow; the
+# Google leg is handled separately by google-sitemap.yml.
+#
+# The key file at https://{host}/{key}.txt verifies submission authority
+# for the host. The same key is committed to each HeartBank site's
+# served-root (static/ for SPAs, repo root for static sites).
+#
+# This workflow file is intentionally IDENTICAL across the thonly.org,
+# heartbank.net, missaquarius.org, and missaquarius.com repos. Keep them
+# in sync; do not diverge one without the others.
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "static/sitemap.xml"
+      - "sitemap.xml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  INDEXNOW_KEY: "1302cd7fe7096d9a272bba5857e71901"
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Submit URLs to IndexNow
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          # Locate sitemap (static/sitemap.xml for SPAs, sitemap.xml for static sites).
+          SITEMAP=""
+          for p in static/sitemap.xml sitemap.xml; do
+            if [ -f "$p" ]; then SITEMAP="$p"; break; fi
+          done
+          if [ -z "$SITEMAP" ]; then
+            echo "No sitemap.xml in static/ or repo root; nothing to submit." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Extract <loc> URLs.
+          URLS=$(grep -oE '<loc>[^<]+</loc>' "$SITEMAP" | sed -E 's|</?loc>||g')
+          COUNT=$(echo "$URLS" | grep -c .)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "No <loc> URLs in $SITEMAP." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Derive host from first URL.
+          FIRST=$(echo "$URLS" | head -1)
+          HOST=$(echo "$FIRST" | sed -E 's|https?://([^/]+).*|\1|')
+          KEY_LOCATION="https://${HOST}/${INDEXNOW_KEY}.txt"
+
+          # Build JSON payload.
+          URL_LIST=$(echo "$URLS" | jq -R . | jq -s .)
+          PAYLOAD=$(jq -n \
+            --arg host "$HOST" \
+            --arg key "$INDEXNOW_KEY" \
+            --arg keyLoc "$KEY_LOCATION" \
+            --argjson list "$URL_LIST" \
+            '{host:$host, key:$key, keyLocation:$keyLoc, urlList:$list}')
+
+          {
+            echo "## IndexNow submission — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "**Host:** \`$HOST\`  "
+            echo "**URLs submitted:** $COUNT  "
+            echo "**Key location:** $KEY_LOCATION"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "Submitting $COUNT URLs to IndexNow for $HOST..."
+          HTTP_CODE=$(curl -sS -o /tmp/indexnow.out -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d "$PAYLOAD" \
+            'https://api.indexnow.org/IndexNow' || echo 000)
+          BODY=$(cat /tmp/indexnow.out 2>/dev/null || true)
+
+          {
+            echo "**HTTP $HTTP_CODE**"
+            echo ""
+            if [ -n "$BODY" ]; then
+              echo "Response:"
+              echo ""
+              echo '```'
+              echo "$BODY"
+              echo '```'
+              echo ""
+            fi
+            echo "_IndexNow is accepted by Bing, Yandex, Naver, Seznam. Google does not participate — see google-sitemap.yml._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          case "$HTTP_CODE" in
+            200|202)
+              echo "✓ Accepted by IndexNow (HTTP $HTTP_CODE)"
+              exit 0
+              ;;
+            *)
+              echo "✗ IndexNow returned HTTP $HTTP_CODE"
+              exit 1
+              ;;
+          esac

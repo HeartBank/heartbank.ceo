@@ -1,0 +1,21 @@
+<!-- ⭐ The artboard's header — it scrolls with the page, and the footer is pushed down by the
+     body's flex column, so nothing is fixed and nothing needs compensating padding. -->
+<header class="gutter flex items-center justify-between gap-6 py-5 border-b border-line bg-bg">
+    <a href="/" class="flex items-center gap-2.5 no-underline hover:no-underline" aria-label="HeartBank CEO — home">
+        <!-- ⭐⭐ THE B-WORDMARK: the B-Emblem™ stands in for the B in *Bank* (never the H in
+             *Heart*). It is a COMPOSITION, not an asset — the path is the vendored
+             `src/brand/emblem.path.txt`, inlined at build time so `currentColor` reaches it.
+             ⛔ Never `<img src>`: CSS cannot reach inside an image, and the colour would have to
+             be repeated at every call site. ⭐ It beats because a wordmark is CHROME;
+             `.beating` goes on the `<svg>` itself and never beside a person's name. -->
+        <span class="font-display text-[1.15rem] font-semibold tracking-[-0.01em] text-ink"><span class="b-wordmark" role="img" aria-label="HeartBank">Heart<!--#emblem beating text-accent-->ank<sup class="text-[0.55em] -top-[0.6em] relative">®</sup></span></span>
+        <span class="font-mono text-[0.68rem] text-ink-faint border border-line rounded-pill px-2 py-0.5 ml-1">CEO</span>
+    </a>
+    <nav class="flex items-center gap-4 sm:gap-7 text-[0.94rem]">
+        <!-- ⛔ ABSENT, NOT DEAD. The artboard draws four items; `Find a shop` and self-serve
+             `Open a shop` belong to the shops app and neither is built, so neither is rendered.
+             A link to nothing is a stub in a different place. The list is generated from NAV in
+             vite.config.ts, so a page that is not built cannot appear here. -->
+        <!--#nav-->
+    </nav>
+</header>

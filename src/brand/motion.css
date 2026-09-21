@@ -1,0 +1,99 @@
+/* ============================================================================
+   MOTION — the heartbeat
+   ----------------------------------------------------------------------------
+   Load after a theme file. Always loaded; there is no alternate.
+
+   THE HEARTBEAT IS A PROOF-OF-HUMANITY SIGNAL, NOT DECORATION. Institutional
+   surfaces may beat ambiently ("humans run this"); a mark beside a PERSON binds
+   strictly to real PoH state. So the rule a consuming site applies is one of
+   PLACEMENT, not of taste: `.beating` goes on the CHROME — a wordmark, a footer
+   attribution, anything that says "an institution stands behind this" — and
+   never on a mark rendered beside somebody's name, where an unverified pulse
+   would be claiming something about THEM. If a mark is ever drawn next to a
+   person, it does not get the class.
+
+   ⚠️ THIS RULE IS ABOUT PLACEMENT, NEVER ABOUT A PARTICULAR SITE. One of the
+   three merged copies ended it with "which is why sayyourname.app beats
+   nowhere". That was the right rule and the wrong reading of one site — the
+   emblem there appears only in the nav and the footer, and the hero name card
+   carries no mark at all. A verdict about one site belongs in that site's own
+   layer. The rule stays here; the verdicts do not.
+
+   The static mark is Proof of Coordinate — a meaningful state, not a
+   degradation. That is why the reduced-motion guard stops and substitutes
+   nothing.                                                                   */
+
+/* Two UNEQUAL beats and then a long rest — systole, a weaker diastole, then
+   most of the period at rest. THAT MORPHOLOGY is what a counterfeit gets wrong
+   at any tempo, which is why it, and not the cadence, is the signature.
+   (~40 BPM here. A 72 BPM variant was built and rejected — see --beat-duration
+   in tokens.css. Do not "correct" either.)
+
+   ⚠️ THE REST LIVES HERE, at 70% -> 100%: 450ms of stillness in every 1500ms
+   cycle, recurring forever. Do not go looking for it in --beat-delay, which is
+   an animation-delay and therefore fires once before the first iteration and
+   never again. The two are easy to confuse because both produce silence; only
+   this one is part of the rhythm. If the pause ever wants to be LONGER, move
+   the 70% stop earlier — that changes the waveform, which is the signature, so
+   it is a deliberate act and not a tuning knob. */
+@keyframes heartbeat {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    14% {
+        transform: scale(1.3);
+    }
+    28% {
+        transform: scale(1);
+    }
+    42% {
+        transform: scale(1.3);
+    }
+    70% {
+        transform: scale(1);
+    }
+}
+
+/* RAW CSS, NOT THE `animate-heartbeat` UTILITY that --animate-heartbeat exists
+   to produce, and that is a repo-shape decision rather than a taste one.
+   Tailwind 4's automatic source detection is rooted at the Vite `root`, which
+   the partial-based sites set to `src/` — so `partials/`, where every emblem in
+   those repos lives, is outside the scan and the utility is never generated for
+   a class written there. It fails silently: no error at any layer, just a mark
+   that does not move. 333.eco keeps the utility as well because its markup is
+   Lit inside scanned .ts files; here the class is the portable form, and it is
+   the one this package ships.
+
+   @source cannot rescue it either. @source resolves against the directory of
+   the CSS MODULE, and this stylesheet is inlined into each entry page, so one
+   relative path would have to be correct from src/, src/buy/, src/login/ and
+   src/account/ at once. It is only right for the first.
+
+   THIS RULE IS ALSO WHAT MAKES --beat-duration AND --beat-delay EXIST in the
+   output. Tailwind tree-shakes @theme and counts a var() in the author's own
+   CSS as a use — but a var() inside an unused @theme value is not one, which is
+   why neither shipped while --animate-heartbeat was their only referent.
+   Verified against dist, not assumed. Should that ever change, the rule goes
+   quiet with no error, so the grep in the README is the tripwire.
+
+   transform-origin is the default, stated: an SVG element's origin is not
+   reliably its centre across engines, and a beat that grows out of a corner
+   reads as a wobble. The scale is safe on this path because the mark's
+   45-degree rotation is baked into the path COORDINATES precisely so a CSS
+   transform has nothing to override — see emblem/emblem.svg, which is the file
+   that trap is recorded in. */
+.beating {
+    animation: heartbeat var(--beat-duration) var(--beat-delay) infinite;
+    transform-origin: center;
+}
+
+/* The scoped guard. Every consumer gets this; it is the minimum that is
+   correct everywhere. A site that also wants the estate-wide sweep opts in by
+   loading reduce-global.css after this file — see that file for why it is
+   opt-in rather than bundled here. */
+@media (prefers-reduced-motion: reduce) {
+    .beating {
+        animation: none;
+    }
+}

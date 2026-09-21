@@ -1,0 +1,5 @@
+# Allow all crawlers. Sitemap below.
+User-agent: *
+Allow: /
+
+Sitemap: https://heartbank.ceo/sitemap.xml
