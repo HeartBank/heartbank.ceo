@@ -7,7 +7,8 @@
 @import "tailwindcss" source(none);
 @source "../index.html";
 @source "../404.html";
-@source "../about/index.html";
+@source "../office/index.html";
+@source "../franchise/index.html";
 @source "../partials";
 @source "../vite.config.ts";
 
@@ -146,6 +147,11 @@ body {
  *   silently eat the correction.
  */
 .b-wordmark {
+    /* ⛔ ONE WORD, SO IT NEVER WRAPS. An inline <svg> is a line-break opportunity, so a squeezed
+       container broke it as "Heart" / "♥ank®" (2026-09-20, the day the header gained a second
+       link). A property of the wordmark, not of any one header it sits in. */
+    white-space: nowrap;
+
     --emblem-fill: 0.7534;
 
     /* ⭐ THE ONE NUMBER THAT IS OURS: every size below is a RATIO TO CAP HEIGHT, and cap height

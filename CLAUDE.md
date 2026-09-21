@@ -27,7 +27,8 @@ shops app.
 
 ```
 index.html            /         the Office — a build of demo.heartbank.ceo/Main.dc.html
-about/index.html      /about/   the Office-of-the-CEO essay (no artboard: composed from the tokens)
+office/index.html     /office/     the Office-of-the-CEO essay (no artboard: composed from the tokens)
+franchise/index.html  /franchise/  the franchise arm — B-Tag™, B-Affiliate/B-Member, the pricing CEO
 404.html              any unknown path — GitHub Pages serves it with a real 404 status
 partials/             head · header · footer, substituted at BUILD time (vite.config.ts)
 src/styles.css        @theme = the artboard's tokens
@@ -37,14 +38,17 @@ scripts/              check-brand.mjs (byte-identical estate-wide) · check-toke
 ```
 
 ⚠️ **The pages sit at the repository root, not under `src/`,** because the estate's shared workflows
-find a page's source by that layout (`snapshot.yml` maps `/about` → `about/index.html`) and read
+find a page's source by that layout (`snapshot.yml` maps `/office` → `office/index.html`) and read
 `static/sitemap.xml` without building. ⛔ Those workflow files are **byte-identical across the estate**
 — lay the repo out to suit them; never edit them to suit the repo.
 
 ⭐⭐ **ONE definition of the site's shape: `NAV` in `vite.config.ts`.** The build inputs and the header
 menu are derived from it; `static/sitemap.xml` and `snapshot-urls.txt` (which the workflows read raw,
 so they cannot be generated) are **checked against it**, and the build FAILS if either disagrees.
-**To add a page:** add it to `NAV`, create `<dir>/index.html`, add its URL to both files.
+**To add a page:** add it to `NAV`, create `<dir>/index.html`, add its URL to both files, and add the
+file to the `@source` list in `styles.css`. ⭐ **To move one, add a `MOVED` row** — the build writes a
+forwarding page at the old address (GitHub Pages cannot 301 on its own) and fails if the target is not
+a page. ⛔ Never delete a `MOVED` row; `/about/` → `/office/` is the first (2026-09-20).
 
 ## The design — the artboard is the spec, including its numbers
 
@@ -58,7 +62,7 @@ repo out as a sibling. ⛔ **Never style this site with Tailwind's default scale
 - ⭐ The illustrations in `index.html` are the artboard's own SVG, lifted verbatim. ⛔ Never redraw
   them; change the artboard first and re-extract. ⛔ The office scene is empty on purpose — no face,
   avatar or portrait.
-- ⚠️ `/about/` has **no artboard**: it is composed from the existing tokens and the home page's own
+- ⚠️ `/office/` and `/franchise/` have **no artboard**: they are composed from the existing tokens and the home page's own
   devices. ⛔ No new numbers there.
 - ⭐ Dark mode follows the OS via `@media (prefers-color-scheme: dark)` — there is no toggle and no
   script to stamp a class. The dark palette is derived from the light one, not redrawn.
@@ -94,14 +98,14 @@ that file (a block comment containing its own terminator once broke a sibling's 
 
 ## Search, previews, analytics
 
-- `robots.txt` allows everything; the sitemap lists `/` and `/about/`. `404.html` hides itself from
+- `robots.txt` allows everything; the sitemap lists `/`, `/office/` and `/franchise/`. `404.html` hides itself from
   search **by named crawler** (`googlebot`, `bingbot`), never a blanket `robots` meta — a link-preview
   crawler can read the blanket form as "do not process" too.
 - ⛔ `og:image` must be an **absolute** URL, or previews render without an image and nothing errors.
 - `static/analytics.js` — Cloudflare Web Analytics + the estate's first-party `page_view` beacon to
   `thonly.org/api/track`; no-ops on local hosts. Plain script, no Firebase.
-- The old single-page URL `/about` now 301s to `/about/` (GitHub Pages does it); the canonical is
-  `/about/`.
+- `/about` → 301 `/about/` (GitHub Pages) → the generated forwarding page → `/office/`. The essay's
+  franchise sections moved to `/franchise/` the same day.
 
 ## Workflows
 

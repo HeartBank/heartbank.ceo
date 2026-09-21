@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import tailwindcss from "@tailwindcss/vite";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, join } from "node:path";
 
 // heartbank.ceo — a static, multi-page site on GitHub Pages.
@@ -13,9 +13,9 @@ import { resolve, join } from "node:path";
 // The shape is brand.333.eco's: plain HTML documents, shared chrome resolved at BUILD time, and one
 // NAV array that every list of pages is derived from or checked against.
 //
-// ⚠️ The pages sit at the REPOSITORY ROOT (index.html, about/index.html, 404.html) rather than
+// ⚠️ The pages sit at the REPOSITORY ROOT (index.html, office/index.html, 404.html) rather than
 //   under src/, because the estate's shared workflows find a page's source by that layout — the
-//   snapshot workflow maps /about to about/index.html, and the IndexNow, Google-sitemap and
+//   snapshot workflow maps /office to office/index.html, and the IndexNow, Google-sitemap and
 //   snapshot workflows all read static/sitemap.xml. Those workflow files are byte-identical across
 //   the estate and must not be edited to suit one repo, so the repo is laid out to suit them.
 
@@ -29,7 +29,19 @@ import { resolve, join } from "node:path";
 // null for a page the menu does not list (the home page is the wordmark's link).
 const NAV: { dir: string; label: string | null }[] = [
     { dir: "", label: null },
-    { dir: "about", label: "The Office" }
+    { dir: "office", label: "The Office" },
+    { dir: "franchise", label: "Franchise Arm" }
+];
+
+// Addresses that USED to be pages. Each gets a generated forwarding document at `from/index.html`,
+// because GitHub Pages cannot send a 301 of its own: an instant meta refresh (which search engines
+// treat as a permanent redirect) plus a canonical link, plus a script that carries the #fragment.
+// ⛔ Never delete a row — a published address is cited somewhere, and a row costs nothing.
+// ⚠️ Generated rather than committed, so a forward cannot point at a page that no longer exists:
+//   the build fails if `to` is not in NAV, or if `from` is.
+const MOVED: { from: string; to: string }[] = [
+    // 2026-09-20 — the Office essay was /about/ until the franchise arm got its own page.
+    { from: "about", to: "office" }
 ];
 
 const urlOf = (dir: string) => (dir === "" ? "/" : `/${dir}/`);
@@ -59,7 +71,7 @@ function htmlPartials(): Plugin {
         transformIndexHtml: {
             order: "pre",
             handler(html, ctx) {
-                // ctx.path is "/index.html" or "/about/index.html" in dev and build alike.
+                // ctx.path is "/index.html" or "/office/index.html" in dev and build alike.
                 const here = ctx.path.replace(/index\.html$/, "");
 
                 const nav = NAV.filter(({ label }) => label !== null)
@@ -69,7 +81,7 @@ function htmlPartials(): Plugin {
                         //   the artboard draws no current-page state, so none is invented here.
                         const current = url === here ? ' aria-current="page"' : "";
                         return (
-                            `<a href="${url}"${current} class="text-accent-soft hover:text-accent">` +
+                            `<a href="${url}"${current} class="whitespace-nowrap text-accent-soft hover:text-accent">` +
                             `${label}</a>`
                         );
                     })
@@ -139,7 +151,30 @@ function siteShape(): Plugin {
             ))
                 throw new Error("a page registers a service worker — this site must register none");
 
+            const dirs = NAV.map(({ dir }) => dir);
+            for (const { from, to } of MOVED) {
+                if (dirs.includes(from)) throw new Error(`MOVED: /${from}/ is still a page in NAV`);
+                if (!dirs.includes(to)) throw new Error(`MOVED: /${from}/ forwards to /${to}/, which is not a page`);
+            }
+
             this.info(`site shape: ${NAV.length} pages; sitemap and snapshot manifest agree with NAV`);
+        },
+        closeBundle() {
+            for (const { from, to } of MOVED) {
+                const url = ORIGIN + urlOf(to);
+                const dir = join(ROOT, "dist", from);
+                mkdirSync(dir, { recursive: true });
+                writeFileSync(
+                    join(dir, "index.html"),
+                    `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8" />\n` +
+                        `<title>Moved — HeartBank® CEO</title>\n` +
+                        `<link rel="canonical" href="${url}" />\n` +
+                        `<meta http-equiv="refresh" content="0; url=${urlOf(to)}" />\n` +
+                        `<script>location.replace(${JSON.stringify(urlOf(to))} + location.hash)</script>\n` +
+                        `</head>\n<body>\n<p>This page is now at <a href="${urlOf(to)}">${url}</a>.</p>\n</body>\n</html>\n`
+                );
+            }
+            this.info(`wrote ${MOVED.length} forwarding page(s): ${MOVED.map(({ from, to }) => `/${from}/ → /${to}/`).join(", ")}`);
         }
     };
 }

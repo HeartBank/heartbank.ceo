@@ -4,5 +4,6 @@
      than exactly the pages in NAV, so it cannot drift from the site. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://heartbank.ceo/</loc><lastmod>2026-09-20</lastmod></url>
-  <url><loc>https://heartbank.ceo/about/</loc><lastmod>2026-09-20</lastmod></url>
+  <url><loc>https://heartbank.ceo/office/</loc><lastmod>2026-09-20</lastmod></url>
+  <url><loc>https://heartbank.ceo/franchise/</loc><lastmod>2026-09-20</lastmod></url>
 </urlset>

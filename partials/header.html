@@ -1,7 +1,12 @@
 <!-- ⭐ The artboard's header — it scrolls with the page, and the footer is pushed down by the
      body's flex column, so nothing is fixed and nothing needs compensating padding. -->
-<header class="gutter flex items-center justify-between gap-6 py-5 border-b border-line bg-bg">
-    <a href="/" class="flex items-center gap-2.5 no-underline hover:no-underline" aria-label="HeartBank CEO — home">
+<!-- ⚠️ `flex-wrap`: with two nav links the header no longer fits every phone on one row. Before
+     this, flex SHRANK the logo link and the wordmark broke mid-word — "Heart" / "♥ank®" — because
+     an inline <svg> is a legal line-break point. Now the logo never shrinks (`shrink-0`), the
+     wordmark never wraps (`.b-wordmark` in styles.css), and a narrow phone moves the nav to its own
+     row instead. Measured 2026-09-20: one row at 390px, two at 375px and below. -->
+<header class="gutter flex flex-wrap items-center justify-between gap-x-4 sm:gap-x-6 gap-y-3 py-5 border-b border-line bg-bg">
+    <a href="/" class="flex shrink-0 items-center gap-2.5 no-underline hover:no-underline" aria-label="HeartBank CEO — home">
         <!-- ⭐⭐ THE B-WORDMARK: the B-Emblem™ stands in for the B in *Bank* (never the H in
              *Heart*). It is a COMPOSITION, not an asset — the path is the vendored
              `src/brand/emblem.path.txt`, inlined at build time so `currentColor` reaches it.

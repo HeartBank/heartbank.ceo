@@ -3,4 +3,5 @@
 # without being archived. Extra lines beyond NAV (redirects, retired URLs) are allowed.
 
 https://heartbank.ceo/
-https://heartbank.ceo/about/
+https://heartbank.ceo/office/
+https://heartbank.ceo/franchise/
