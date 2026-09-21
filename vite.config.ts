@@ -59,7 +59,7 @@ const emblem = (classes: string) =>
     `<svg class="${classes}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">` +
     `<path fill="currentColor" d="${EMBLEM_PATH}"/></svg>`;
 
-// Shared chrome, resolved at BUILD time rather than by the client — three documents share ONE copy
+// Shared chrome, resolved at BUILD time rather than by the client — every document shares ONE copy
 // of the head, header and footer. transformIndexHtml runs in dev AND build, so what the dev server
 // shows is what ships.
 function htmlPartials(): Plugin {
