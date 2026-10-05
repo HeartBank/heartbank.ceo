@@ -79,7 +79,9 @@ const isPackageRepo = existsSync(join(BASE, "css")) && existsSync(join(BASE, "da
 
 const packageFiles = () => {
     const out = [];
-    for (const dir of ["css", "emblem"]) {
+    // ⭐ v1.4.0 — `qr/` joined (the B-QR recipe, A295). A new directory goes in this list AND in package.json `files`
+    //   (check-publish.mjs fails until it is shipped), and a consumer finds it through the lock, never through a rule here.
+    for (const dir of ["css", "emblem", "qr"]) {
         for (const f of readdirSync(join(BASE, dir)).sort()) out.push(`${dir}/${f}`);
     }
     return out;
@@ -98,7 +100,7 @@ if (isPackageRepo) {
     if (!existsSync(LOCK)) die("brand.lock is missing. Run: node scripts/check-brand.mjs --write");
     if (readFileSync(LOCK, "utf8") !== body) {
         die(
-            "brand.lock does not match the files in css/ and emblem/.\n" +
+            "brand.lock does not match the files in css/, emblem/ and qr/.\n" +
                 "  Run: node scripts/check-brand.mjs --write\n" +
                 "  Then commit brand.lock in the SAME commit as the file it locks, or a\n" +
                 "  consumer will sync bytes the lock does not describe."
@@ -130,8 +132,9 @@ if (from) {
     if (!existsSync(join(src, "brand.lock"))) {
         die(`${src} has no brand.lock — is --from pointing at the brand.333.eco checkout?`);
     }
+    const theirs = JSON.parse(readFileSync(join(src, "brand.lock"), "utf8")).files;
     for (const name of uses.files) {
-        const origin = join(src, dirOf(name), name);
+        const origin = join(src, dirOf(name, theirs), name);
         if (!existsSync(origin)) die(`${origin} is missing from the brand checkout`);
         copyFileSync(origin, join(targetDir, name));
     }
@@ -144,8 +147,13 @@ if (from) {
     process.exit(0);
 }
 
-function dirOf(name) {
-    return name.endsWith(".css") ? "css" : "emblem";
+/* Which package directory a vendored file lives in — read from the LOCK, whose keys are `dir/name`, so a new directory
+   (qr/, v1.4.0) needs no rule here. ⛔ Two package files with one name in two directories would be ambiguous, and the
+   lock is refused rather than guessed. Older locks (≤ v1.3.0, css/ and emblem/ only) resolve the same way. */
+function dirOf(name, files) {
+    const hits = Object.keys(files).filter((k) => k.slice(k.indexOf("/") + 1) === name);
+    if (hits.length > 1) die(`brand.lock names ${name} in two directories (${hits.join(", ")}) — rename one upstream.`);
+    return hits.length ? hits[0].slice(0, hits[0].indexOf("/")) : name.endsWith(".css") ? "css" : "emblem";
 }
 
 if (!existsSync(LOCK)) {
@@ -212,7 +220,7 @@ if (args.includes("--currency")) {
 const problems = [];
 
 for (const name of uses.files) {
-    const key = `${dirOf(name)}/${name}`;
+    const key = `${dirOf(name, lock.files)}/${name}`;
     const expected = lock.files[key];
     const local = join(targetDir, name);
 
