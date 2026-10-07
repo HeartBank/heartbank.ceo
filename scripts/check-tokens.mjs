@@ -62,6 +62,14 @@ const ROOT_DRAWINGS = ["Main.dc.html"];
 const EXPECTED_OTHERS = 37;
 
 /**
+ * ⭐ HeartBank Treasury's own drawings (its gift-code screens, drawn 2026-10-05): `Treasury*.dc.html` render on `thank.heartbank.org`,
+ *   not here and not in the shops app — assigned BY NAME, the way `thank.heartbank.ceo`'s check exempts them
+ *   (`BODY_EXEMPT_PREFIX`). ⛔ Not by raising the count: a count lets a new unassigned screen cancel a deleted one.
+ *   Before this, every build here failed on them (52 ≠ 37) and nothing deployed (found 2026-10-07).
+ */
+const OTHER_SITE_PREFIXES = { Treasury: "HeartBank Treasury's (thank.heartbank.org)" };
+
+/**
  * ⭐ ONE DRAWING, SO NOTHING CAN SPLIT. `Main.dc.html` states `font-size:16px; line-height:1.65`
  *   and it is the only root drawing there is. ⚠️ The machinery for a SPLIT is deliberately kept —
  *   it reported a real one until 2026-09-20 — so a second root drawing that disagrees is caught
@@ -157,7 +165,8 @@ function fromArtboards(dir) {
     const all = readdirSync(dir).filter((f) => f.endsWith(".dc.html"));
     if (all.length === 0) throw new Error(`no artboards found in ${dir}`);
     const unassigned = [];
-    const others = all.filter((f) => !ROOT_DRAWINGS.includes(f));
+    const elsewhere = all.filter((f) => Object.keys(OTHER_SITE_PREFIXES).some((p) => f.startsWith(p)));
+    const others = all.filter((f) => !ROOT_DRAWINGS.includes(f) && !elsewhere.includes(f));
     if (others.length !== EXPECTED_OTHERS)
         unassigned.push(
             `${others.length} non-root artboards, expected ${EXPECTED_OTHERS} — somebody drew a ` +
