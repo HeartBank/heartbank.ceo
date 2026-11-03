@@ -45,18 +45,18 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   path: heartbank.ceo
 
             - name: Checkout the artboards (the design of record)
-              uses: actions/checkout@v4
+              uses: actions/checkout@v6
               with:
                   repository: HeartBank/demo.heartbank.ceo
                   path: demo.heartbank.ceo
 
             - name: Setup Node
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v6
               with:
                   node-version: 22
 
@@ -74,10 +74,10 @@ jobs:
                   }
 
             - name: Setup Pages
-              uses: actions/configure-pages@v5
+              uses: actions/configure-pages@v6
 
             - name: Clear stale Pages artifact (safe re-runs)
-              uses: actions/github-script@v7
+              uses: actions/github-script@v8
               with:
                   script: |
                       const { data } = await github.rest.actions.listWorkflowRunArtifacts({
@@ -97,10 +97,10 @@ jobs:
                       }
 
             - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
+              uses: actions/upload-pages-artifact@v5
               with:
                   path: heartbank.ceo/dist
 
             - name: Deploy
               id: deployment
-              uses: actions/deploy-pages@v4
+              uses: actions/deploy-pages@v5
