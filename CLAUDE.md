@@ -26,15 +26,15 @@ shops app.
 ## Layout
 
 ```
-index.html            /         the Office — a build of demo.heartbank.ceo/Main.dc.html
+index.html            /         the Office — first built from demo.heartbank.ceo/Main.dc.html; now edited here
 office/index.html     /office/     the Office-of-the-CEO essay (no artboard: composed from the tokens)
 franchise/index.html  /franchise/  the franchise arm — B-Tag™, B-Affiliate/B-Member, the pricing CEO
 404.html              any unknown path — GitHub Pages serves it with a real 404 status
 partials/             head · header · footer, substituted at BUILD time (vite.config.ts)
-src/styles.css        @theme = the artboard's tokens
+src/styles.css        @theme = the site's tokens (this file is their source)
 src/brand/            VENDORED from brand.333.eco — never edit in place
 static/               copied verbatim: CNAME · robots · sitemap · analytics.js · IndexNow key · sw.js · icons
-scripts/              check-brand.mjs (byte-identical estate-wide) · check-tokens.mjs
+scripts/              check-brand.mjs (byte-identical estate-wide)
 ```
 
 ⚠️ **The pages sit at the repository root, not under `src/`,** because the estate's shared workflows
@@ -50,17 +50,17 @@ file to the `@source` list in `styles.css`. ⭐ **To move one, add a `MOVED` row
 forwarding page at the old address (GitHub Pages cannot 301 on its own) and fails if the target is not
 a page. ⛔ Never delete a `MOVED` row; `/about/` → `/office/` is the first (2026-09-20).
 
-## The design — the artboard is the spec, including its numbers
+## The design — this repo is the source, including its numbers
 
-⭐⭐ **The design of record is `../demo.heartbank.ceo/Main.dc.html`.** Every colour, size, radius and
-face reaches the build through `@theme` in `src/styles.css`, and **`npm run tokens:check` diffs it
-against the drawing before every build** — in CI too, where the workflow checks the (public) demo
-repo out as a sibling. ⛔ **Never style this site with Tailwind's default scale** (`emerald-700`,
+⭐⭐ **Since 2026-11-11 the LIVE SITE is the source; the drawing is a dated record** (founder: *"deprecate all
+source drawings everywhere; keeping the demo in sync is unrealistic"*; `/build` Default 18). The site was
+first built from `../demo.heartbank.ceo/Main.dc.html`; `tokens:check` and CI's checkout of the demo repo
+are gone (the drawing had already drifted, and the check failed every build). Every colour, size, radius
+and face reaches the build through `@theme` in `src/styles.css`: change it there. ⛔ **Never style this site with Tailwind's default scale** (`emerald-700`,
 `text-4xl`, `rounded-2xl`, `gray-200`) — another design system's numbers produce a page that looks
-*nearly* like its drawing, which is the one failure the artboards exist to prevent.
+*nearly* right, which is the hardest failure to see.
 
-- ⭐ The illustrations in `index.html` are the artboard's own SVG, lifted verbatim. ⛔ Never redraw
-  them; change the artboard first and re-extract. ⛔ The office scene is empty on purpose — no face,
+- ⭐ The illustrations in `index.html` were the artboard's own SVG, lifted verbatim; edit them here now. ⛔ The office scene is empty on purpose — no face,
   avatar or portrait.
 - ⚠️ `/office/` and `/franchise/` have **no artboard**: they are composed from the existing tokens and the home page's own
   devices. ⛔ No new numbers there.

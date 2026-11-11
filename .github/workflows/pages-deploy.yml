@@ -2,13 +2,9 @@ name: Deploy to GitHub Pages
 
 # Builds the site and deploys it to GitHub Pages on every push to main.
 #
-# ADAPTED FROM brand.333.eco's workflow. Two differences, both deliberate:
-#   1. THE ARTBOARDS ARE CHECKED OUT BESIDE THIS REPO. `npm run build` runs its prebuild guards,
-#      and check-tokens.mjs diffs src/styles.css against ../demo.heartbank.ceo/Main.dc.html — the
-#      design of record. demo.heartbank.ceo is public, so it needs no token; checking both out as
-#      siblings makes `../demo.heartbank.ceo` resolve here exactly as it does on a laptop, and the
-#      drawing-is-the-source guard runs before every deploy rather than only before a local build.
-#   2. The site is at the repo root, so the artifact is `dist`, not a subdirectory's.
+# ADAPTED FROM brand.333.eco's workflow. The site is at the repo root, so the artifact is `dist`, not a subdirectory's.
+# ⚠️ The drawing (demo.heartbank.ceo) is no longer checked out or checked against: since 2026-11-11 THIS repo is the
+#   source of the live site, and the drawing is a dated record (founder: "deprecate all source drawings everywhere").
 #
 # ⚠️ CNAME LIVES IN static/, which Vite copies into dist. Assert it survived the build: a missing
 #   CNAME on a Pages artifact is a working build and an unmapped domain, with nothing in the log.
@@ -49,19 +45,13 @@ jobs:
               with:
                   path: heartbank.ceo
 
-            - name: Checkout the artboards (the design of record)
-              uses: actions/checkout@v6
-              with:
-                  repository: HeartBank/demo.heartbank.ceo
-                  path: demo.heartbank.ceo
-
             - name: Setup Node
               uses: actions/setup-node@v6
               with:
                   node-version: 22
 
-            # prebuild runs the three guards first: check-brand (the vendored brand layer matches
-            # brand.lock) · check-tokens (the theme matches the artboard) · the kill switch parses.
+            # prebuild runs two guards first: check-brand (the vendored brand layer matches
+            # brand.lock) · the kill switch parses.
             - name: Build
               working-directory: heartbank.ceo
               run: npm ci && npm run build

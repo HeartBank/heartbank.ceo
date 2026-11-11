@@ -32,13 +32,12 @@
 @custom-variant dark (@media (prefers-color-scheme: dark));
 
 /*
- * ⛔⛔ THE ARTBOARD IS THE DESIGN SYSTEM, AND THESE ARE ITS TOKENS.
+ * ⛔⛔ THESE ARE THE SITE'S DESIGN TOKENS, AND THIS FILE IS THEIR SOURCE (since 2026-11-11).
  *
- * Every value is lifted from `demo.heartbank.ceo/Main.dc.html`, the design of record, and
- * `npm run tokens:check` diffs them against it before every build — the drawing is the source,
- * and this block is checked, not trusted. They sit in `@theme` because Tailwind v4 builds its
- * utilities FROM custom properties: the drawing's numbers stay single-sourced and the page still
- * gets responsive variants (the artboard is a fixed 1440 and has to collapse to a phone).
+ * They were first lifted from `demo.heartbank.ceo/Main.dc.html`, which is now a dated record and is no
+ * longer checked against: change a value HERE. They sit in `@theme` because Tailwind v4 builds its
+ * utilities FROM custom properties: one source for every number, and the page still gets responsive
+ * variants (the original artboard was a fixed 1440 and had to collapse to a phone).
  *
  * ⛔ Never style this site with Tailwind's DEFAULT scale — `emerald-700`, `text-4xl`,
  *   `rounded-2xl`, `gray-200`. Those are another design system's numbers, and a page built from
@@ -110,7 +109,7 @@
 /*
  * ⛔ THE BASE TYPE IS A DESIGN TOKEN TOO. `Main.dc.html` states `font-size:16px;
  * line-height:1.65`; without this rule preflight supplies 1.5 and every paragraph reads tighter
- * than its drawing. `tokens:check` requires it.
+ * than its drawing did.
  * ⭐ There are no shadow roots on this site any more, so `body` is the whole story — the `:host`
  *   restatement the Lit build needed (preflight's `html, :host` rule landing on every component)
  *   has nothing left to reach.
