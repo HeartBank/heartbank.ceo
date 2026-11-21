@@ -81,7 +81,7 @@ function htmlPartials(): Plugin {
                         //   the artboard draws no current-page state, so none is invented here.
                         const current = url === here ? ' aria-current="page"' : "";
                         return (
-                            `<a href="${url}"${current} class="whitespace-nowrap text-accent-soft hover:text-accent">` +
+                            `<a href="${url}"${current} class="whitespace-nowrap text-accent-soft hover:text-accent py-0.5">` +
                             `${label}</a>`
                         );
                     })

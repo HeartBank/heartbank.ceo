@@ -6,17 +6,17 @@
      wordmark never wraps (`.b-wordmark` in styles.css), and a narrow phone moves the nav to its own
      row instead. Measured 2026-09-20: one row at 390px, two at 375px and below. -->
 <header class="gutter flex flex-wrap items-center justify-between gap-x-4 sm:gap-x-6 gap-y-3 py-5 border-b border-line bg-bg">
-    <a href="/" class="flex shrink-0 items-center gap-2.5 no-underline hover:no-underline" aria-label="HeartBank CEO — home">
+    <a href="/" class="flex shrink-0 items-center gap-2.5 no-underline hover:no-underline">
         <!-- ⭐⭐ THE B-WORDMARK: the B-Emblem™ stands in for the B in *Bank* (never the H in
              *Heart*). It is a COMPOSITION, not an asset — the path is the vendored
              `src/brand/emblem.path.txt`, inlined at build time so `currentColor` reaches it.
              ⛔ Never `<img src>`: CSS cannot reach inside an image, and the colour would have to
              be repeated at every call site. ⭐ It beats because a wordmark is CHROME;
              `.beating` goes on the `<svg>` itself and never beside a person's name. -->
-        <span class="font-display text-[1.15rem] font-semibold tracking-[-0.01em] text-ink"><span class="b-wordmark" role="img" aria-label="HeartBank">Heart<!--#emblem beating text-accent-->ank<sup class="text-[0.55em] -top-[0.6em] relative">®</sup></span></span>
-        <span class="font-mono text-[0.68rem] text-ink-faint border border-line rounded-pill px-2 py-0.5 ml-1">CEO</span>
+        <span class="font-display text-20 font-semibold tracking-[-0.01em] text-ink"><span class="b-wordmark" aria-hidden="true">Heart<!--#emblem beating text-accent-->ank<sup class="text-[0.55em] -top-[0.6em] relative">®</sup></span><span class="sr-only">HeartBank®</span></span>
+        <span class="font-mono text-12 text-ink-faint border border-line rounded-pill px-2 py-0.5 ml-1">CEO</span>
     </a>
-    <nav class="flex items-center gap-4 sm:gap-7 text-[0.94rem]">
+    <nav class="flex items-center gap-4 sm:gap-7 text-14">
         <!-- ⛔ ABSENT, NOT DEAD. The artboard draws four items; `Find a shop` and self-serve
              `Open a shop` belong to the shops app and neither is built, so neither is rendered.
              A link to nothing is a stub in a different place. The list is generated from NAV in

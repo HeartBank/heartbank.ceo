@@ -11,6 +11,13 @@
 @source "../franchise/index.html";
 @source "../partials";
 @source "../vite.config.ts";
+/*
+ * ⛔ THE EMBLEM'S CLASSES ARE DECLARED, NOT FOUND. They reach the page through a build directive inside an HTML comment
+ *   (`<!--#emblem beating text-accent-->`), where the scanner reads `text-accent-->`, not `text-accent`. Until 2026-11-20 the
+ *   class was generated only because the diagram's → arrow happened to use it too; when the arrow moved to `text-accent-soft`
+ *   (contrast), the emblem turned black. Named here, it no longer depends on an unrelated element.
+ */
+@source inline("text-accent beating");
 
 /*
  * The heartbeat comes from the VENDORED brand layer — `src/brand/motion.css`, hashed by
@@ -52,7 +59,8 @@
     --color-line-strong: rgba(20, 16, 30, 0.28);
     --color-ink: #16141c;
     --color-ink-dim: #5b5766;
-    --color-ink-faint: #8b8796;
+    /* ≥ 4.62 : 1 on bg, bg-tint and surface-2 (computed 2026-11-20; #8b8796 was 3.39 on the page, 2.88 on surface-2) */
+    --color-ink-faint: #69657a;
     --color-accent: #15803d;
     --color-accent-soft: #106430;
     --color-accent-ink: #ffffff;
@@ -73,10 +81,18 @@
 
     /* The artboard's display sizes, fluid. The drawing fixes a PROPORTION at 1440; a phone needs
        the proportion, not the pixel, so each clamps down rather than scaling the page. */
-    --text-hero: clamp(2.1rem, 6vw, 3.4rem);
-    --text-section: clamp(1.5rem, 3vw, 1.9rem);
-    --text-lede: clamp(1.05rem, 2vw, 1.22rem);
-    --text-eyebrow: 0.72rem;
+    /* ⭐ THE ESTATE'S TYPE SCALE (founder 2026-11-20): 12 · 14 · 16 · 20 · 28 · 40, body 16; no size outside it. The four named
+       roles sit on it — the title 28 stepping to 40 at ≥ 1024 px, a section head 20 → 28, a lede 16 → 20 (the steps: below @theme). */
+    --text-12: 0.75rem;
+    --text-14: 0.875rem;
+    --text-16: 1rem;
+    --text-20: 1.25rem;
+    --text-28: 1.75rem;
+    --text-40: 2.5rem;
+    --text-hero: 1.75rem;
+    --text-section: 1.25rem;
+    --text-lede: 1rem;
+    --text-eyebrow: 0.75rem;
 }
 
 /*
@@ -97,7 +113,7 @@
         --color-line-strong: rgba(255, 255, 255, 0.3);
         --color-ink: #f4f2f8;
         --color-ink-dim: #b3aec0;
-        --color-ink-faint: #85808f;
+        --color-ink-faint: #888893;   /* ≥ 4.69 : 1 on every dark surface (#85808f was 4.29 on surface-2) */
         --color-accent: #2ea55c;
         --color-accent-soft: #46bd73;
         --color-accent-ink: #0f0e13;
@@ -190,4 +206,9 @@ body {
        ⛔ Never re-tune by eye — a hand-tuned value moves the line box with it (slope ≈ −0.39, not
        −1), so it can look landed while the size and the insets are both wrong underneath. */
     vertical-align: baseline;
+}
+
+/* The scale's steps at ≥ 1024 px: the title 28 → 40, a section head 20 → 28, a lede 16 → 20 (founder 2026-11-20). */
+@media (min-width: 1024px) {
+    :root { --text-hero: 2.5rem; --text-section: 1.75rem; --text-lede: 1.25rem; }
 }
