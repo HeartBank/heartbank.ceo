@@ -27,11 +27,24 @@ import { resolve, join } from "node:path";
 //
 // `dir` is the directory under the repo root; "" is the home page. `label` is its menu text, or
 // null for a page the menu does not list (the home page is the wordmark's link).
-const NAV: { dir: string; label: string | null }[] = [
-    { dir: "", label: null },
-    { dir: "office", label: "The Office" },
-    { dir: "franchise", label: "Franchise Arm" }
+const NAV: { dir: string; label: string | null; label_km: string | null }[] = [
+    { dir: "", label: null, label_km: null },
+    { dir: "office", label: "The Office", label_km: "ការិយាល័យ" },
+    { dir: "franchise", label: "Franchise Arm", label_km: "ផ្នែកហ្វ្រេនឆាយ" }
 ];
+
+// ⭐ EVERY PAGE IN BOTH LANGUAGES (founder 2026-11-22): English at /<dir>/, Khmer at /km/<dir>/. The Khmer is OUR DRAFT
+//   until a native reader approves it through /khmer-review, and the Khmer footer says so. Each Khmer page is its own file
+//   (km/office/index.html), made from the English page run by run; the review pairs the two by their shape, so keep them in
+//   step. The menu labels above, and the language switch's own label below, are the Khmer review's too.
+const LANGS = [
+    { code: "en", prefix: "", locale: "en_US", name: "EN", group: "Language" },
+    { code: "km", prefix: "km", locale: "km_KH", name: "ខ្មែរ", group: "ភាសា" }
+] as const;
+type Lang = (typeof LANGS)[number]["code"];
+const langOf = (path: string): Lang => (path.startsWith("/km/") ? "km" : "en");
+// every document the build makes from NAV: one per page per language
+const PAGES = NAV.flatMap((n) => LANGS.map((l) => ({ ...n, lang: l.code as Lang, file: join(l.prefix, n.dir, "index.html") })));
 
 // Addresses that USED to be pages. Each gets a generated forwarding document at `from/index.html`,
 // because GitHub Pages cannot send a 301 of its own: an instant meta refresh (which search engines
@@ -44,7 +57,10 @@ const MOVED: { from: string; to: string }[] = [
     { from: "about", to: "office" }
 ];
 
-const urlOf = (dir: string) => (dir === "" ? "/" : `/${dir}/`);
+const urlOf = (dir: string, lang: Lang = "en") => {
+    const path = [lang === "km" ? "km" : "", dir].filter(Boolean).join("/");
+    return path ? `/${path}/` : "/";
+};
 const ORIGIN = "https://heartbank.ceo";
 const ROOT = import.meta.dirname;
 
@@ -63,7 +79,12 @@ const emblem = (classes: string) =>
 // of the head, header and footer. transformIndexHtml runs in dev AND build, so what the dev server
 // shows is what ships.
 function htmlPartials(): Plugin {
-    const read = (name: string) => readFileSync(join(ROOT, "partials", `${name}.html`), "utf8");
+    // a Khmer page takes `<name>-km.html` where one exists (the footer); the head and header are one file for both,
+    // their language-dependent parts resolved by the directives below
+    const read = (name: string, lang: Lang) => {
+        const km = join(ROOT, "partials", `${name}-km.html`);
+        return readFileSync(lang === "km" && existsSync(km) ? km : join(ROOT, "partials", `${name}.html`), "utf8");
+    };
 
     return {
         name: "ceo-html-partials",
@@ -71,32 +92,53 @@ function htmlPartials(): Plugin {
         transformIndexHtml: {
             order: "pre",
             handler(html, ctx) {
-                // ctx.path is "/index.html" or "/office/index.html" in dev and build alike.
+                // ctx.path is "/index.html", "/office/index.html" or "/km/office/index.html" in dev and build alike.
                 const here = ctx.path.replace(/index\.html$/, "");
+                const lang = langOf(ctx.path);
+                const L = LANGS.find((l) => l.code === lang)!;
+                // this page's NAV entry (none for 404.html), so the switch and the alternates name its other language
+                const page = NAV.find(({ dir }) => urlOf(dir, lang) === here);
+
+                // the language switch: this page in each language (the front page where it has no counterpart)
+                const langs =
+                    `<span class="flex items-center gap-0.5 border border-line rounded-pill p-0.5 font-mono text-12" role="group" aria-label="${L.group}">` +
+                    LANGS.map((l) => {
+                        const cur = l.code === lang ? ' aria-current="true"' : "";
+                        return `<a href="${urlOf(page?.dir ?? "", l.code)}" hreflang="${l.code}" lang="${l.code}"${cur} class="px-2 py-0.5 rounded-pill no-underline hover:no-underline text-ink-faint hover:text-ink aria-[current=true]:bg-accent-wash aria-[current=true]:text-ink">${l.name}</a>`;
+                    }).join("") +
+                    `</span>`;
+                const alternates = page
+                    ? [...LANGS.map((l) => `<link rel="alternate" hreflang="${l.code}" href="${ORIGIN}${urlOf(page.dir, l.code)}" />`),
+                       `<link rel="alternate" hreflang="x-default" href="${ORIGIN}${urlOf(page.dir)}" />`].join("\n")
+                    : "";
 
                 const nav = NAV.filter(({ label }) => label !== null)
-                    .map(({ dir, label }) => {
-                        const url = urlOf(dir);
+                    .map(({ dir, label, label_km }) => {
+                        const url = urlOf(dir, lang);
                         // aria-current tells a screen reader which page this is. ⛔ Not styled:
                         //   the artboard draws no current-page state, so none is invented here.
                         const current = url === here ? ' aria-current="page"' : "";
                         return (
                             `<a href="${url}"${current} class="whitespace-nowrap text-accent-soft hover:text-accent py-0.5">` +
-                            `${label}</a>`
+                            `${lang === "km" ? label_km : label}</a>`
                         );
                     })
                     .join("\n        ");
 
                 const out = html
-                    .replace(/<!--#include ([a-z]+)-->/g, (_m, name: string) => read(name))
+                    .replace(/<!--#include ([a-z]+)-->/g, (_m, name: string) => read(name, lang))
                     .replace("<!--#nav-->", nav)
+                    .replace("<!--#langs-->", langs)
+                    .replace("<!--#home-->", urlOf("", lang))
+                    .replace("<!--#locale-->", L.locale)
+                    .replace("<!--#alternates-->", alternates)
                     .replace(/<!--#emblem ([a-z -]+)-->/g, (_m, classes: string) =>
                         emblem(classes.trim())
                     );
 
                 // A surviving directive ships as an HTML comment: invisible, and the page silently
                 // loses its header or its mark. Fail the build instead.
-                if (/<!--#(include|nav|emblem)/.test(out))
+                if (/<!--#(include|nav|emblem|langs|home|locale|alternates)/.test(out))
                     throw new Error(`html-partials: an unresolved directive survived in ${ctx.path}`);
                 return out;
             }
@@ -115,7 +157,7 @@ function siteShape(): Plugin {
         name: "ceo-site-shape",
         apply: "build",
         buildStart() {
-            const want = NAV.map(({ dir }) => ORIGIN + urlOf(dir));
+            const want = PAGES.map(({ dir, lang }) => ORIGIN + urlOf(dir, lang));
 
             // The sitemap must list EXACTLY the pages — a missing page is never indexed, and an
             // extra one advertises an address that 404s.
@@ -145,7 +187,7 @@ function siteShape(): Plugin {
             if (!existsSync(join(ROOT, "static/sw.js")))
                 throw new Error("static/sw.js is missing — the old service worker can never be evicted");
             if (/navigator\.serviceWorker\.register/.test(
-                ["index.html", "404.html", ...NAV.map(({ dir }) => join(dir, "index.html"))]
+                ["index.html", "404.html", ...PAGES.map(({ file }) => file)]
                     .map((f) => readFileSync(join(ROOT, f), "utf8"))
                     .join("\n")
             ))
@@ -157,7 +199,11 @@ function siteShape(): Plugin {
                 if (!dirs.includes(to)) throw new Error(`MOVED: /${from}/ forwards to /${to}/, which is not a page`);
             }
 
-            this.info(`site shape: ${NAV.length} pages; sitemap and snapshot manifest agree with NAV`);
+            // ⭐ every page in both languages: a Khmer page missing (or one the menu cannot reach) fails the build
+            for (const { file } of PAGES)
+                if (!existsSync(join(ROOT, file))) throw new Error(`${file} is missing — every page in NAV has an English and a Khmer document`);
+
+            this.info(`site shape: ${NAV.length} pages × ${LANGS.length} languages; sitemap and snapshot manifest agree with NAV`);
         },
         closeBundle() {
             for (const { from, to } of MOVED) {
@@ -198,7 +244,7 @@ export default defineConfig({
             // sitemap.
             input: {
                 ...Object.fromEntries(
-                    NAV.map(({ dir }) => [dir === "" ? "index" : dir, resolve(ROOT, dir, "index.html")])
+                    PAGES.map(({ dir, lang, file }) => [[lang === "km" ? "km" : "", dir].filter(Boolean).join("-") || "index", resolve(ROOT, file)])
                 ),
                 "404": resolve(ROOT, "404.html")
             }

@@ -29,8 +29,10 @@ shops app.
 index.html            /         the Office — first built from demo.heartbank.ceo/Main.dc.html; now edited here
 office/index.html     /office/     the Office-of-the-CEO essay (no artboard: composed from the tokens)
 franchise/index.html  /franchise/  the franchise arm — B-Tag™, B-Affiliate/B-Member, the pricing CEO
+km/…/index.html       /km/, /km/office/, /km/franchise/ — the same pages in Khmer (2026-11-22), OUR DRAFT until a native
+                      reader approves it (/khmer-review), made from the English pages run by run: keep the two in step
 404.html              any unknown path — GitHub Pages serves it with a real 404 status
-partials/             head · header · footer, substituted at BUILD time (vite.config.ts)
+partials/             head · header · footer (+ footer-km.html), substituted at BUILD time (vite.config.ts)
 src/styles.css        @theme = the site's tokens (this file is their source)
 src/brand/            VENDORED from brand.333.eco — never edit in place
 static/               copied verbatim: CNAME · robots · sitemap · analytics.js · IndexNow key · sw.js · icons
@@ -45,8 +47,11 @@ find a page's source by that layout (`snapshot.yml` maps `/office` → `office/i
 ⭐⭐ **ONE definition of the site's shape: `NAV` in `vite.config.ts`.** The build inputs and the header
 menu are derived from it; `static/sitemap.xml` and `snapshot-urls.txt` (which the workflows read raw,
 so they cannot be generated) are **checked against it**, and the build FAILS if either disagrees.
-**To add a page:** add it to `NAV`, create `<dir>/index.html`, add its URL to both files, and add the
-file to the `@source` list in `styles.css`. ⭐ **To move one, add a `MOVED` row** — the build writes a
+**To add a page:** add it to `NAV` (with `label_km`), create `<dir>/index.html` AND `km/<dir>/index.html`, add both URLs
+to both files, and add the file to the `@source` list in `styles.css`. ⭐ **Every page is in both languages** (`LANGS`;
+the build fails if a Khmer document is missing): the header's menu and its EN | ខ្មែរ switch, `og:locale` and the hreflang
+alternates are generated per language; a Khmer page takes `partials/<name>-km.html` where one exists. ⭐ The Khmer review
+(`npm run khmer-strings` · `khmer-capture` · `khmer-apply`) pairs each English page with its Khmer page by shape. ⭐ **To move one, add a `MOVED` row** — the build writes a
 forwarding page at the old address (GitHub Pages cannot 301 on its own) and fails if the target is not
 a page. ⛔ Never delete a `MOVED` row; `/about/` → `/office/` is the first (2026-09-20).
 

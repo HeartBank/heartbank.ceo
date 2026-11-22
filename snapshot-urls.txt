@@ -5,3 +5,6 @@
 https://heartbank.ceo/
 https://heartbank.ceo/office/
 https://heartbank.ceo/franchise/
+https://heartbank.ceo/km/
+https://heartbank.ceo/km/office/
+https://heartbank.ceo/km/franchise/

@@ -1,0 +1,12 @@
+{
+ "about": "The screens the Khmer review's screenshots are taken from (npm run khmer-capture → /khmer-review capture): the LOCAL build of this static site, in Khmer, most typical first — the FIRST screen that shows an entry keeps it. The capture is a phone in Cambodia, so the not-found page shows its Khmer too.",
+ "base": "http://localhost:4333",
+ "viewport": { "width": 390, "height": 844 },
+ "stamp": { "register": "M-0025", "rights": "reserved", "disclosure": "https://demo.heartbank.ceo/khmer/heartbank.ceo/" },
+ "states": [
+  { "id": "home", "url": "/km/", "ready": "main", "settle": 1500 },
+  { "id": "office", "url": "/km/office/", "ready": "main", "settle": 1200 },
+  { "id": "franchise", "url": "/km/franchise/", "ready": "main", "settle": 1200 },
+  { "id": "not-found", "url": "/404.html", "ready": "main", "settle": 1200 }
+ ]
+}

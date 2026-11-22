@@ -9,6 +9,7 @@
 @source "../404.html";
 @source "../office/index.html";
 @source "../franchise/index.html";
+@source "../km";
 @source "../partials";
 @source "../vite.config.ts";
 /*
@@ -133,6 +134,29 @@
 body {
     font-size: 16px;
     line-height: 1.65;
+}
+
+/*
+ * ⭐ THE KHMER PAGES (/km/, founder 2026-11-22). Every face keeps its Latin letters and gains Noto Sans Khmer for the
+ *   Khmer ones (a stack falls through glyph by glyph, so `HeartBank®` stays in Newsreader inside a Khmer heading). Khmer's
+ *   stacked vowels and subscripts need more line height than the display sizes' 1.04, and letter-spacing pulls a cluster
+ *   apart, so both are reset there. ⛔ Not `--font-sans` (see `--font-khmer` above). No new size: only the faces and the
+ *   line height change.
+ */
+:root:lang(km) {
+    --font-display: "Newsreader", "Noto Sans Khmer", Georgia, serif;
+    --font-text: "IBM Plex Sans", "Noto Sans Khmer", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", "Noto Sans Khmer", ui-monospace, Menlo, monospace;
+}
+html:lang(km) :is(h1, h2, h3) {
+    line-height: 1.5;
+    letter-spacing: 0;
+}
+html:lang(km) :is(p, li, span, a) {
+    letter-spacing: 0;
+}
+html:lang(km) :is(p, li) {
+    line-height: 1.85;
 }
 
 /* The two values `brand/motion.css`'s `.beating` reads — the layer's own (`tokens.css` v1.3.0): a

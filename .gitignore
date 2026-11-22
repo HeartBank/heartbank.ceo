@@ -1,3 +1,5 @@
 dist/
 node_modules/
 .DS_Store
+# the Khmer review sheet (scripts/khmer-strings.mjs): for a reviewer, never in the site or the repo
+staging/

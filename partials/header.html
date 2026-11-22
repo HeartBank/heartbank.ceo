@@ -6,7 +6,7 @@
      wordmark never wraps (`.b-wordmark` in styles.css), and a narrow phone moves the nav to its own
      row instead. Measured 2026-09-20: one row at 390px, two at 375px and below. -->
 <header class="gutter flex flex-wrap items-center justify-between gap-x-4 sm:gap-x-6 gap-y-3 py-5 border-b border-line bg-bg">
-    <a href="/" class="flex shrink-0 items-center gap-2.5 no-underline hover:no-underline">
+    <a href="<!--#home-->" class="flex shrink-0 items-center gap-2.5 no-underline hover:no-underline">
         <!-- ⭐⭐ THE B-WORDMARK: the B-Emblem™ stands in for the B in *Bank* (never the H in
              *Heart*). It is a COMPOSITION, not an asset — the path is the vendored
              `src/brand/emblem.path.txt`, inlined at build time so `currentColor` reaches it.
@@ -22,5 +22,7 @@
              A link to nothing is a stub in a different place. The list is generated from NAV in
              vite.config.ts, so a page that is not built cannot appear here. -->
         <!--#nav-->
+        <!-- ⭐ English | ខ្មែរ: this page in the other language (founder 2026-11-22), generated in vite.config.ts -->
+        <!--#langs-->
     </nav>
 </header>

@@ -13,7 +13,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:brand": "node scripts/check-brand.mjs",
-    "brand:sync": "node scripts/check-brand.mjs"
+    "brand:sync": "node scripts/check-brand.mjs",
+    "khmer-strings": "node scripts/khmer-strings.mjs",
+    "khmer-apply": "node scripts/khmer-strings.mjs apply",
+    "khmer-capture": "node scripts/khmer-capture.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
