@@ -104,7 +104,7 @@ function htmlPartials(): Plugin {
                     `<span class="flex items-center gap-0.5 border border-line rounded-pill p-0.5 font-mono text-12" role="group" aria-label="${L.group}">` +
                     LANGS.map((l) => {
                         const cur = l.code === lang ? ' aria-current="true"' : "";
-                        return `<a href="${urlOf(page?.dir ?? "", l.code)}" hreflang="${l.code}" lang="${l.code}"${cur} class="px-2 py-0.5 rounded-pill no-underline hover:no-underline text-ink-faint hover:text-ink aria-[current=true]:bg-accent-wash aria-[current=true]:text-ink">${l.name}</a>`;
+                        return `<a href="${urlOf(page?.dir ?? "", l.code)}" hreflang="${l.code}" lang="${l.code}"${cur} class="px-2 py-1 rounded-pill no-underline hover:no-underline text-ink-faint hover:text-ink aria-[current=true]:bg-accent-wash aria-[current=true]:text-ink">${l.name}</a>`;
                     }).join("") +
                     `</span>`;
                 const alternates = page
